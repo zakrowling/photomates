@@ -42,7 +42,7 @@ test('leaving frees the seat and hands hosting on', () => {
   room.leave('a');
   const lobby = last('lobbyUpdate').data;
   assert.equal(lobby.hostId, 'b');
-  assert.deepEqual(lobby.players.map((p) => [p.id, p.seat]), [['b', 0], ['c', 1]]);
+  assert.deepEqual(lobby.players.map((p) => [p.id, p.seat]), [['b', 1], ['c', 2]], 'everyone stays put');
 });
 
 test('anyone can switch the scene, including scenes this host has never heard of', () => {
@@ -57,18 +57,43 @@ test('anyone can switch the scene, including scenes this host has never heard of
   assert.ok(SCENES.includes('office'));
 });
 
-test('shuffle mixes up the seats but keeps everyone', () => {
+test('shuffle moves everyone to random spots in the scene, keeping them all apart', () => {
   const { room, last } = makeRoom();
   for (let i = 0; i < 8; i++) room.join(`p${i}`);
-  const before = room.order.join();
-  let changed = false;
-  for (let i = 0; i < 5 && !changed; i++) {
-    room.input('p0', { type: 'shuffle' });
-    changed = room.order.join() !== before;
+  const spots = () => last('lobbyUpdate').data.players.map((p) => p.seat);
+  room.announceJoin();
+  const before = spots().join();
+  assert.equal(before, '0,1,2,3,4,5,6,7');
+  assert.equal(room.input('p0', { type: 'shuffle', spots: 14 }), true);
+  const after = spots();
+  assert.notEqual(after.join(), before);
+  assert.equal(new Set(after).size, 8, 'no doubling up');
+  after.forEach((s) => assert.ok(s >= 0 && s < 14));
+});
+
+test('someone on their own can shuffle to a different spot', () => {
+  const { room, last } = makeRoom();
+  room.join('solo');
+  const seen = new Set();
+  for (let i = 0; i < 20; i++) {
+    const was = room.spots.get('solo');
+    assert.equal(room.input('solo', { type: 'shuffle', spots: 6 }), true);
+    const now = last('lobbyUpdate').data.players[0].seat;
+    assert.notEqual(now, was, 'it always moves');
+    seen.add(now);
   }
-  assert.ok(changed);
-  assert.deepEqual([...room.order].sort(), before.split(',').sort());
-  assert.deepEqual(last('lobbyUpdate').data.players.map((p) => p.seat), [0, 1, 2, 3, 4, 5, 6, 7]);
+  assert.ok(seen.size > 2);
+  assert.equal(room.input('solo', { type: 'shuffle', spots: 1 }), false, 'nowhere else to go');
+});
+
+test('joiners take the best free spot', () => {
+  const { room, last } = makeRoom();
+  ['a', 'b', 'c'].forEach((id) => room.join(id));
+  room.leave('a');
+  room.join('d');
+  room.announceJoin('d');
+  const bySeat = Object.fromEntries(last('lobbyUpdate').data.players.map((p) => [p.id, p.seat]));
+  assert.deepEqual(bySeat, { b: 1, c: 2, d: 0 });
 });
 
 test('the shutter counts down for everyone, one photo at a time', () => {

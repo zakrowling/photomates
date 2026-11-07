@@ -64,3 +64,20 @@ for (const id of ['bodybuilders', 'samurai']) test(`${id} have a head for each o
     assert.ok(chin > s.neck.y && chin < s.neck.y + s.neck.w, `chin ${chin} neck ${s.neck.y}`);
   });
 });
+
+test('everyone keeps their spot, and anyone whose spot a scene lacks takes the best free one', () => {
+  const spots = Scenes.slots('bodybuilders', 2);
+  assert.equal(spots.length, 6);
+  const at = Scenes.assign(spots, [{ seat: 4 }, { seat: 11 }]);
+  assert.equal(at.get(4).seat, 4);
+  assert.equal(at.get(0).seat, 11);
+  // A board with 6 spots leaves a 7th person out rather than doubling up.
+  const crowd = Array.from({ length: 7 }, (_, i) => ({ seat: i }));
+  assert.equal(Scenes.assign(spots, crowd).size, 6);
+});
+
+test('a solo shuffle can land anywhere in the office, starting from the middle', () => {
+  const spots = Scenes.slots('office', 1);
+  assert.equal(spots.length, Scenes.byId('office').priority.length);
+  assert.ok(Math.abs(spots[0].cx - Scenes.W / 2) < 6);
+});

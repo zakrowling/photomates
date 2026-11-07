@@ -7,6 +7,7 @@
   else root.PhotomatesEngine = factory();
 })(typeof self !== 'undefined' ? self : this, () => {
   const MAX_PLAYERS = 12;
+  const MAX_SPOTS = 24; // most spots any scene has
   const COUNTDOWN_MS = 3000;
   const MAX_STILL_CHARS = 600_000; // a data: URL for one person's photo
   const PART_CHARS = 14000; // PeerJS sends at most ~16KB per message, so photos go in pieces
@@ -48,7 +49,8 @@
       this.now = hooks.now || (() => Date.now());
       this.hostId = null;
       this.players = new Map(); // id -> { id, number, name, color }
-      this.order = []; // player ids in seat order: the first gets the best seat
+      this.order = []; // player ids in joining order (decides who hosts next)
+      this.spots = new Map(); // id -> which spot in the scene they're in (0 is the best spot)
       this.scene = SCENES[0];
       this.shot = 0; // which photo we're on
       this.shotAt = 0; // when the current photo's shutter fires (host clock)
@@ -76,6 +78,10 @@
       const color = COLORS.find((c) => !usedColors.has(c)) || COLORS[number % COLORS.length];
       this.players.set(id, { id, number, name, color });
       this.order.push(id);
+      const usedSpots = new Set(this.spots.values());
+      let spot = 0;
+      while (usedSpots.has(spot)) spot++;
+      this.spots.set(id, spot);
       if (!this.hostId) this.hostId = id;
       return { ok: true, payload: { playerId: id, ...this.lobbyPayload() } };
     }
@@ -87,6 +93,7 @@
     leave(id) {
       if (!this.players.delete(id)) return;
       this.order = this.order.filter((p) => p !== id);
+      this.spots.delete(id);
       if (this.players.size === 0) return;
       if (this.hostId === id) this.hostId = this.order[0];
       this.broadcastLobby();
@@ -99,7 +106,8 @@
 
     /**
      * { type: 'scene', id }      switch everyone to a scene
-     * { type: 'shuffle' }        mix up who sits where
+     * { type: 'shuffle', spots } move everyone to random spots out of the scene's `spots` (so even
+     *                          one person can be moved somewhere else)
      * { type: 'shutter' }        start the 3-2-1 countdown
      * { type: 'stillPart', n, i, total, data } piece i of my photo (a data: URL) for shot n, passed on
      *                          to everyone else
@@ -112,14 +120,24 @@
           this.scene = msg.id;
           this.broadcastLobby();
           return true;
-        case 'shuffle':
-          if (this.order.length < 2) return false;
-          for (let i = this.order.length - 1; i > 0; i--) {
-            const j = this.rand(i + 1);
-            [this.order[i], this.order[j]] = [this.order[j], this.order[i]];
+        case 'shuffle': {
+          const n = this.order.length;
+          const spots = Math.max(n, Math.min(MAX_SPOTS, Number.isInteger(msg.spots) ? msg.spots : n));
+          if (spots < 2) return false;
+          const before = this.order.map((p) => this.spots.get(p)).join();
+          // Random spots for everyone (trying again if nothing moved).
+          for (let attempt = 0; attempt < 10; attempt++) {
+            const pool = Array.from({ length: spots }, (_, i) => i);
+            for (let i = pool.length - 1; i > 0; i--) {
+              const j = this.rand(i + 1);
+              [pool[i], pool[j]] = [pool[j], pool[i]];
+            }
+            this.order.forEach((p, i) => this.spots.set(p, pool[i]));
+            if (this.order.map((p) => this.spots.get(p)).join() !== before) break;
           }
           this.broadcastLobby();
           return true;
+        }
         case 'shutter':
           // One photo at a time: ignore presses during a countdown and for a moment after it.
           if (this.shotAt && this.now() < this.shotAt + 2000) return false;
@@ -145,7 +163,7 @@
     }
 
     lobbyPayload() {
-      const players = this.order.map((id, seat) => ({ ...this.players.get(id), seat }));
+      const players = this.order.map((id) => ({ ...this.players.get(id), seat: this.spots.get(id) }));
       return { roomCode: this.code, hostId: this.hostId, started: false, scene: this.scene, shot: this.shot, players };
     }
 

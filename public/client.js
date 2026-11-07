@@ -25,7 +25,7 @@ const state = {
   hostId: null,
   linkRoom: false,
   roomCode: '',
-  players: [], // from the host, in seat order: { id, number, name, color, seat }
+  players: [], // from the host: { id, number, name, color, seat } (seat is their spot in the scene)
   scene: 'office',
   inBooth: false,
   pending: null, // the photo being taken: { n, scene, players, stills: Map(id -> Image), mine }
@@ -488,7 +488,7 @@ function applyLobby(payload) {
   });
   const n = state.players.length;
   $('people').textContent = `${n} in the booth`;
-  $('shuffle-btn').disabled = n < 2;
+  $('shuffle-btn').disabled = Scenes.slots(state.scene, n).length < 2;
   history.replaceState(null, '', `${basePath()}?room=${encodeURIComponent(payload.roomCode.toLowerCase())}${DEBUG ? '&debug' : ''}`);
   syncCalls();
 }
@@ -550,7 +550,10 @@ $('leave-btn').addEventListener('click', () => {
   socket.emit('leaveRoom');
   leaveBooth();
 });
-$('shuffle-btn').addEventListener('click', () => socket.emit('input', { type: 'shuffle' }));
+// Move everyone to random spots in this scene (on your own, that moves you somewhere new).
+$('shuffle-btn').addEventListener('click', () => {
+  socket.emit('input', { type: 'shuffle', spots: Scenes.slots(state.scene, state.players.length).length });
+});
 $('shutter').addEventListener('click', () => socket.emit('input', { type: 'shutter' }));
 $('copy-btn').addEventListener('click', async () => {
   try {

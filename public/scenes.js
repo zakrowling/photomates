@@ -263,7 +263,7 @@
   // of a neck: necks are [x, y, width] for the middle of each neck's top edge on the stage. Heads are
   // sized from the neck's width and placed so the chin sits a little over the neck top.
   const CHIN_AT = 0.585; // how far down each person's picture their chin is (see updateCrop in client.js)
-  function bodyScene({ id, name, src, necks, tone, headScale = 4.1, sides = '#0a0d16' }) {
+  function bodyScene({ id, name, src, necks, tone, headScale = 5.1, sides = '#0a0d16' }) {
     return {
       id,
       name,
@@ -317,7 +317,7 @@
       [323, 324, 29],
       [969, 344, 29],
     ],
-    headScale: 5.4,
+    headScale: 6.7,
     // Cool, dim stage light.
     tone: 'contrast(1.05) saturate(0.9) brightness(0.92) hue-rotate(-4deg)',
     sides: '#0b1020',
@@ -357,23 +357,51 @@
   function layout(sceneId, n) {
     const scene = byId(sceneId);
     // Boards have a fixed number of holes: anyone beyond that isn't in the picture.
-    if (scene.kind === 'holes' || scene.kind === 'heads') return scene.seats.slice(0, Math.min(n, scene.capacity));
-    if (scene.kind === 'grid') {
-      return scene.cells(n).slice(0, n).map((cell) => {
-        // Head and shoulders filling the cell's height, face in the upper middle.
-        const size = Math.min(cell.w * 1.1, cell.h * 1.2);
-        return { x: cell.x + cell.w / 2 - size / 2, y: cell.y - size * 0.06, size, clip: cell, row: 0, bench: cell.y + cell.h };
-      });
-    }
-    // On your own, you get the middle seat.
-    const order = n === 1 ? [scene.solo || [1, 2]] : scene.priority;
-    return order.slice(0, n).map(([r, i]) => {
+    return slots(sceneId, n).slice(0, scene.capacity ? Math.min(n, scene.capacity) : n);
+  }
+
+  // Every spot in a scene for a group of n, best first (spot 0 is where someone on their own goes).
+  function slots(sceneId, n) {
+    const scene = byId(sceneId);
+    if (scene.kind === 'holes' || scene.kind === 'heads') return scene.seats;
+    if (scene.kind === 'grid') return layoutCells(scene.cells(n));
+    const solo = scene.solo || [1, 2];
+    const order = n === 1 ? [solo, ...scene.priority.filter(([r, i]) => r !== solo[0] || i !== solo[1])] : scene.priority;
+    return rowSeats(scene, order);
+  }
+
+  function layoutCells(cells) {
+    return cells.map((cell) => {
+      // Head and shoulders filling the cell's height, face in the upper middle.
+      const size = Math.min(cell.w * 1.1, cell.h * 1.2);
+      return { x: cell.x + cell.w / 2 - size / 2, y: cell.y - size * 0.06, size, clip: cell, row: 0, bench: cell.y + cell.h };
+    });
+  }
+
+  function rowSeats(scene, order) {
+    return order.map(([r, i]) => {
       const row = scene.rows[r];
       const size = row.size;
       // Photo rows say where the face goes; drawn rows tuck the bottom of the picture behind the bench.
       const y = row.faceY !== undefined ? row.faceY - FACE_AT * size : row.bench + size * 0.28 - size;
       return { x: row.xs[i] - size / 2, y, size, row: r, bench: row.bench, cx: row.xs[i] };
     });
+  }
+
+  // Who's in which spot: everyone keeps their own spot if the scene has it, otherwise takes the best free
+  // one. Returns Map(spot index -> person); anyone who doesn't fit (a full board) is left out.
+  function assign(spots, people) {
+    const at = new Map();
+    const homeless = [];
+    [...people].sort((a, b) => a.seat - b.seat).forEach((p) => {
+      if (Number.isInteger(p.seat) && p.seat >= 0 && p.seat < spots.length && !at.has(p.seat)) at.set(p.seat, p);
+      else homeless.push(p);
+    });
+    homeless.forEach((p) => {
+      const free = spots.findIndex((_, i) => !at.has(i));
+      if (free >= 0) at.set(free, p);
+    });
+    return at;
   }
 
   /**
@@ -383,8 +411,8 @@
    */
   function render(c, sceneId, people) {
     const scene = byId(sceneId);
-    const seats = layout(sceneId, people.length);
-    const at = new Map(people.map((p) => [p.seat, p]));
+    const seats = slots(sceneId, people.length);
+    const at = assign(seats, people);
     c.save();
     if (scene.kind === 'heads') {
       // The bodies, then everyone's head on top, back to front (higher necks are further back).
@@ -608,5 +636,5 @@
     c.restore();
   }
 
-  return { W, H, SCENES, layout, render, byId, bradyCells };
+  return { W, H, SCENES, layout, slots, assign, render, byId, bradyCells };
 });
