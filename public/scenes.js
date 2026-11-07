@@ -386,7 +386,7 @@
     src: 'assets/bg/beach.jpg',
     rows: [
       { bench: 324, faceY: 230, size: 200, xs: [308, 649, 997] },
-      { bench: 568, faceY: 432, size: 290, xs: [213, 646, 1083] },
+      { bench: 575, faceY: 448, size: 290, xs: [213, 646, 1083] },
     ],
     priority: [[1, 1], [0, 1], [1, 0], [1, 2], [0, 0], [0, 2]],
     solo: [1, 1],
@@ -430,12 +430,12 @@
     tone: 'grayscale(1) sepia(0.12) contrast(1.15) brightness(0.88)',
   });
 
-  // Mammal Pals (assets/bg/mammal-pals.jpg): 6 headless animals in a sunny meadow: a cheetah, a meerkat
+  // Mammal Mates (assets/bg/mammal-mates.jpg): 6 headless animals in a sunny meadow: a cheetah, a meerkat
   // and an emu at the back, a deer, a lion and a bear lying in front.
   const woodland = bodyScene({
     id: 'woodland',
-    name: 'Mammal Pals',
-    src: 'assets/bg/mammal-pals.jpg',
+    name: 'Mammal Mates',
+    src: 'assets/bg/mammal-mates.jpg',
     necks: [
       [651, 122, 47],
       [658, 369, 63],
