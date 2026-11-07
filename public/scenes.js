@@ -412,7 +412,27 @@
     tone: 'grayscale(1) sepia(0.12) contrast(1.15) brightness(0.88)',
   });
 
-  const SCENES = [office, airplane, brady, bodybuilders, samurai, christmas, halloween];
+  // Woodland Creatures (assets/bg/woodland-creatures.jpg): 6 headless animals by a waterfall: a deer, a
+  // meerkat and an emu at the back, a moose, a buffalo and a bear in front.
+  const woodland = bodyScene({
+    id: 'woodland',
+    name: 'Woodland Creatures',
+    src: 'assets/bg/woodland-creatures.jpg',
+    necks: [
+      [638, 135, 49],
+      [645, 364, 56],
+      [467, 158, 45],
+      [807, 158, 41],
+      [352, 357, 50],
+      [941, 353, 56],
+    ],
+    headScale: 4.6,
+    sink: 0.9,
+    // Soft, misty forest light.
+    tone: 'saturate(0.9) sepia(0.15) contrast(0.95) brightness(0.98)',
+  });
+
+  const SCENES = [office, airplane, brady, bodybuilders, woodland, samurai, christmas, halloween];
   const byId = (id) => SCENES.find((s) => s.id === id) || SCENES[0];
 
   // Seat rectangles (where each person's square picture goes) for n people, in seat order.
