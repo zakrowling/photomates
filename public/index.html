@@ -81,6 +81,25 @@
     .hint { color: var(--muted); font-size: 16px; margin: 8px 0; }
     .error { color: #ff8fa8; min-height: 1em; margin: 8px 0 0; }
 
+    /* ---------- Lobby: everyone in the booth so far ---------- */
+    #lobby-card.in-room { max-width: 920px; }
+    .slots { display: grid; grid-template-columns: repeat(6, 1fr); gap: 12px; margin: 0 0 14px; }
+    .slot {
+      display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 8px 8px 10px;
+      background: #0c1612; border: 2px dashed var(--line); border-radius: 16px; color: var(--muted);
+    }
+    .slot.filled { border-style: solid; border-color: var(--mate); color: var(--text); }
+    .slot.you { box-shadow: 0 0 18px -2px var(--mate); }
+    .slot canvas { display: block; width: 100%; aspect-ratio: 1; border-radius: 11px; }
+    .slot-label { font-family: var(--display); font-weight: 600; font-size: 16px; }
+    .slot-tag { font-size: 13px; color: var(--muted); min-height: 1.2em; }
+    .more-mates { margin: -4px 0 12px; color: var(--muted); }
+    #lobby-card #open-btn { max-width: 340px; margin: 6px auto 14px; }
+    .lobby-invite { display: inline-flex; align-items: center; gap: 8px; border: 1px solid var(--line); border-radius: 12px; padding: 4px 4px 4px 12px; }
+    .lobby-invite code { font-family: var(--display); font-weight: 600; letter-spacing: 3px; font-size: 18px; }
+    @media (max-width: 700px) { .slots { grid-template-columns: repeat(3, 1fr); } }
+    .chip.home-btn { display: grid; place-items: center; padding: 10px 14px; }
+
     /* ---------- Booth ---------- */
     #booth { width: 100%; max-width: 1280px; }
     body.in-booth header { display: none; }
@@ -191,9 +210,19 @@
       <input type="text" id="room-input" maxlength="4" placeholder="CODE" autocomplete="off" aria-label="Room code">
       <button class="btn secondary" id="join-btn">Join</button>
     </div>
+    <div id="room-lobby" hidden>
+      <div class="slots" id="slots"></div>
+      <p class="more-mates" id="more-mates" hidden></p>
+      <p class="hint" id="lobby-camera" hidden><span id="lobby-camera-text"></span> <button class="small-btn" id="lobby-camera-btn" hidden>Turn on camera</button></p>
+      <button class="btn" id="open-btn">Open the booth</button>
+      <div class="lobby-invite">
+        <code id="lobby-code">----</code>
+        <button class="small-btn" id="lobby-copy-btn">Copy invite</button>
+      </div>
+    </div>
     <p class="hint" id="connecting-hint" hidden>Connecting...</p>
     <p class="error" id="error-msg" role="alert"></p>
-    <p class="hint">Works best in Chrome or Edge on a laptop or desktop. Your camera only goes to the mates in your booth.</p>
+    <p class="hint" id="browser-hint">Works best in Chrome or Edge on a laptop or desktop. Your camera only goes to the mates in your booth.</p>
   </div>
 
   <div id="booth" hidden>
@@ -209,6 +238,9 @@
     </div>
 
     <div class="controls">
+      <button class="chip home-btn" id="home-btn" aria-label="Back to the lobby" title="Back to the lobby">
+        <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M3 11.5 12 4l9 7.5M5.5 9.5V20h5v-6h3v6h5V9.5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
       <div class="scene-picker">
         <div class="select-wrap"><select id="scene-select" aria-label="Scene"></select></div>
       </div>

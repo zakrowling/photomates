@@ -28,7 +28,8 @@ const state = {
   roomCode: '',
   players: [], // from the host: { id, number, name, color, seat } (seat is their spot in the scene)
   scene: 'office',
-  inBooth: false,
+  inBooth: false, // in a room (the lobby or the booth)
+  open: false, // the room's booth is open (otherwise everyone's in the lobby)
   pending: null, // the photo being taken: { n, scene, players, stills: Map(id -> Image), mine }
   stillsEarly: new Map(), // photos that arrived before our own countdown finished: n -> Map
 };
@@ -114,14 +115,20 @@ async function startCamera() {
   }
   cam.ready = true;
   $('camera-msg').hidden = true;
+  $('lobby-camera').hidden = true;
 }
 
+// Shown over the booth and in the lobby.
 function showCameraMsg(text, withButton) {
   $('camera-text').textContent = text;
   $('camera-btn').hidden = !withButton;
   $('camera-msg').hidden = false;
+  $('lobby-camera-text').textContent = text;
+  $('lobby-camera-btn').hidden = !withButton;
+  $('lobby-camera').hidden = false;
 }
 $('camera-btn').addEventListener('click', startCamera);
+$('lobby-camera-btn').addEventListener('click', startCamera);
 
 // The part of the camera picture we use: the middle 16:9 of it. Cameras (and browsers inside iframes)
 // sometimes give a squarer 4:3 picture; cropping it rather than stretching it keeps faces the right shape.
@@ -418,6 +425,7 @@ setInterval(() => {
 function frame(now) {
   requestAnimationFrame(frame);
   if (!state.inBooth) return;
+  if (!state.open) return drawSlots(now);
   // The booth is cropped to the scene's own shape.
   const fw = Scenes.frameWidth(state.scene, state.players.length);
   if (stage.width !== fw) {
@@ -430,6 +438,101 @@ function frame(now) {
   Scenes.render(sctx, state.scene, livePeople(now));
 }
 requestAnimationFrame(frame);
+
+// ---------- Lobby ----------
+
+// 6 slots, Mate 1 to Mate 6 (by their number in the room), each showing that mate's live cut-out.
+const LOBBY_SLOTS = 6;
+const SLOT_PX = 192;
+function buildSlots() {
+  $('slots').replaceChildren(...Array.from({ length: LOBBY_SLOTS }, (_, i) => {
+    const slot = document.createElement('div');
+    slot.className = 'slot';
+    const c = document.createElement('canvas');
+    c.width = SLOT_PX;
+    c.height = SLOT_PX;
+    const label = document.createElement('div');
+    label.className = 'slot-label';
+    label.textContent = `Mate ${i + 1}`;
+    const tag = document.createElement('div');
+    tag.className = 'slot-tag';
+    slot.append(c, label, tag);
+    return slot;
+  }));
+}
+
+function renderSlots() {
+  [...$('slots').children].forEach((slot, i) => {
+    const p = state.players.find((pl) => pl.number === i + 1);
+    const you = !!p && p.id === state.playerId;
+    slot.classList.toggle('filled', !!p);
+    slot.classList.toggle('you', you);
+    slot.style.setProperty('--mate', p ? p.color : 'transparent');
+    slot.querySelector('.slot-tag').textContent = you ? 'You' : p ? '' : 'Waiting...';
+  });
+  const more = state.players.filter((p) => p.number > LOBBY_SLOTS).length;
+  $('more-mates').hidden = !more;
+  $('more-mates').textContent = `+${more} more mate${more === 1 ? '' : 's'}`;
+}
+
+function drawSlots(now) {
+  [...$('slots').children].forEach((slot, i) => {
+    const c = slot.querySelector('canvas').getContext('2d');
+    const p = state.players.find((pl) => pl.number === i + 1);
+    c.clearRect(0, 0, SLOT_PX, SLOT_PX);
+    c.fillStyle = '#0f1a16';
+    c.fillRect(0, 0, SLOT_PX, SLOT_PX);
+    if (!p) {
+      // An empty seat: a faint outline of a person.
+      c.strokeStyle = 'rgba(255,255,255,0.12)';
+      c.lineWidth = 3;
+      c.setLineDash([7, 7]);
+      silhouette(c);
+      c.stroke();
+      c.setLineDash([]);
+      return;
+    }
+    const g = c.createRadialGradient(SLOT_PX / 2, SLOT_PX * 0.45, 10, SLOT_PX / 2, SLOT_PX / 2, SLOT_PX * 0.75);
+    g.addColorStop(0, `${p.color}55`);
+    g.addColorStop(1, `${p.color}11`);
+    c.fillStyle = g;
+    c.fillRect(0, 0, SLOT_PX, SLOT_PX);
+    const cut = cutouts.get(p.id);
+    if (cut && now - cut.seenAt < 2000) {
+      c.drawImage(cut.canvas, 0, 0, SLOT_PX, SLOT_PX);
+    } else {
+      // No picture yet (camera starting or off): their colour as a person shape.
+      c.fillStyle = `${p.color}aa`;
+      silhouette(c);
+      c.fill();
+    }
+  });
+}
+
+function silhouette(c) {
+  const s = SLOT_PX;
+  c.beginPath();
+  c.ellipse(s / 2, s * 0.4, s * 0.15, s * 0.18, 0, 0, Math.PI * 2);
+  c.moveTo(s * 0.16, s);
+  c.quadraticCurveTo(s * 0.2, s * 0.64, s / 2, s * 0.64);
+  c.quadraticCurveTo(s * 0.8, s * 0.64, s * 0.84, s);
+  c.closePath();
+}
+
+// Which screen to show: create/join, the lobby, or the booth.
+function showView() {
+  const inLobby = state.inBooth && !state.open;
+  $('lobby-card').hidden = state.inBooth && state.open;
+  $('lobby-card').classList.toggle('in-room', state.inBooth);
+  $('setup-view').hidden = state.inBooth;
+  $('browser-hint').hidden = state.inBooth;
+  $('room-lobby').hidden = !inLobby;
+  $('booth').hidden = !(state.inBooth && state.open);
+  document.body.classList.toggle('in-booth', state.inBooth && state.open);
+  if (!state.open) {
+    $('gallery').hidden = true;
+  }
+}
 
 // ---------- Sounds ----------
 
@@ -506,7 +609,9 @@ function applyLobby(payload) {
   state.players = [...payload.players].sort((a, b) => a.seat - b.seat);
   state.scene = payload.scene;
   state.roomCode = payload.roomCode;
+  state.open = !!payload.started;
   $('room-code-txt').textContent = payload.roomCode;
+  $('lobby-code').textContent = payload.roomCode;
   [...$('scene-select').options].forEach((o) => {
     // Scenes with only so many spots take turns when there are more mates than that.
     const cap = Scenes.byId(o.value).capacity;
@@ -520,16 +625,17 @@ function applyLobby(payload) {
   const n = state.players.length;
   $('shuffle-btn').disabled = Scenes.slots(state.scene, n).length < 2;
   history.replaceState(null, '', `${basePath()}?room=${encodeURIComponent(payload.roomCode.toLowerCase())}${DEBUG ? '&debug' : ''}`);
+  renderSlots();
+  showView();
   syncCalls();
 }
 
+// In a room: the lobby until someone opens the booth. The camera starts straight away, so everyone
+// can see each other in the lobby.
 function enterBooth() {
   if (state.inBooth) return;
   state.inBooth = true;
-  $('lobby-card').hidden = true;
-  document.querySelector('header').hidden = false;
-  $('booth').hidden = false;
-  document.body.classList.add('in-booth');
+  showView();
   if (!cam.stream) startCamera();
 }
 
@@ -538,10 +644,9 @@ function leaveBooth() {
   state.players = [];
   calls.forEach((c) => closeCall(c));
   calls.clear();
-  $('booth').hidden = true;
   $('result').hidden = true;
-  $('lobby-card').hidden = false;
-  document.body.classList.remove('in-booth');
+  state.open = false;
+  showView();
   history.replaceState(null, '', basePath() + (DEBUG ? '?debug' : ''));
 }
 
@@ -581,6 +686,8 @@ $('shuffle-btn').addEventListener('click', () => {
   socket.emit('input', { type: 'shuffle', spots: Scenes.slots(state.scene, state.players.length).length });
 });
 $('shutter').addEventListener('click', () => socket.emit('input', { type: 'shutter' }));
+$('open-btn').addEventListener('click', () => socket.emit('input', { type: 'open' }));
+$('home-btn').addEventListener('click', () => socket.emit('input', { type: 'home' }));
 $('copy-btn').addEventListener('click', async () => {
   try {
     await navigator.clipboard.writeText(shareLink(state.roomCode));
@@ -595,6 +702,11 @@ $('copy-btn').addEventListener('click', async () => {
   }
   $('copy-btn').textContent = 'Copied!';
   setTimeout(() => { $('copy-btn').textContent = 'Copy invite'; }, 1500);
+});
+$('lobby-copy-btn').addEventListener('click', () => {
+  $('copy-btn').click();
+  $('lobby-copy-btn').textContent = 'Copied!';
+  setTimeout(() => { $('lobby-copy-btn').textContent = 'Copy invite'; }, 1500);
 });
 
 socket.on('lobbyUpdate', applyLobby);
@@ -612,7 +724,10 @@ socket.on('reconnecting', (message) => {
 });
 socket.on('rejoined', (res) => {
   $('reconnect-hint').hidden = true;
+  // A new host starts with the booth closed; if we were in it, open it again.
+  const wasOpen = state.open;
   handleJoinResponse(res);
+  if (wasOpen && res.ok && !res.started) socket.emit('input', { type: 'open' });
 });
 
 
@@ -884,6 +999,7 @@ $('close-result').addEventListener('click', closeResult);
 $('x-result').addEventListener('click', closeResult);
 
 buildScenePicker();
+buildSlots();
 enterRoomFromUrl();
 
 if (DEBUG) window.__photoDebug = { state, cam, calls, cutouts, socket };

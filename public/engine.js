@@ -53,6 +53,7 @@
       this.spots = new Map(); // id -> which spot in the scene they're in (0 is the best spot)
       this.satOut = new Map(); // id -> how many shuffles in a row they've been left out of the picture
       this.scene = SCENES[0];
+      this.open = false; // false: everyone waits in the lobby; true: everyone's in the booth
       this.shot = 0; // which photo we're on
       this.shotAt = 0; // when the current photo's shutter fires (host clock)
       this.stills = new Map(); // id -> how much of their photo has arrived for this shot
@@ -101,7 +102,7 @@
       this.broadcastLobby();
     }
 
-    // There's no round to start: everyone is in the booth as soon as they join.
+    // Mates gather in the lobby, then anyone opens the booth (the 'open' input) for everyone.
     start() {
       return false;
     }
@@ -110,6 +111,8 @@
      * { type: 'scene', id }      switch everyone to a scene
      * { type: 'shuffle', spots } move everyone to random spots out of the scene's `spots` (so even
      *                          one person can be moved somewhere else)
+     * { type: 'open' }           take everyone from the lobby into the booth
+     * { type: 'home' }           take everyone back to the lobby
      * { type: 'shutter' }        start the 3-2-1 countdown
      * { type: 'stillPart', n, i, total, data } piece i of my photo (a data: URL) for shot n, passed on
      *                          to everyone else
@@ -117,6 +120,14 @@
     input(id, msg) {
       if (!msg || typeof msg !== 'object' || !this.players.has(id)) return false;
       switch (msg.type) {
+        case 'open':
+        case 'home': {
+          const open = msg.type === 'open';
+          if (this.open === open) return false;
+          this.open = open;
+          this.broadcastLobby();
+          return true;
+        }
         case 'scene':
           if (typeof msg.id !== 'string' || !SCENE_ID.test(msg.id) || msg.id === this.scene) return false;
           this.scene = msg.id;
@@ -153,6 +164,7 @@
           return true;
         }
         case 'shutter':
+          if (!this.open) return false;
           // One photo at a time: ignore presses during a countdown and for a moment after it.
           if (this.shotAt && this.now() < this.shotAt + 2000) return false;
           this.shot++;
@@ -178,7 +190,7 @@
 
     lobbyPayload() {
       const players = this.order.map((id) => ({ ...this.players.get(id), seat: this.spots.get(id) }));
-      return { roomCode: this.code, hostId: this.hostId, started: false, scene: this.scene, shot: this.shot, players };
+      return { roomCode: this.code, hostId: this.hostId, started: this.open, scene: this.scene, shot: this.shot, players };
     }
 
     broadcastLobby() {

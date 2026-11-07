@@ -112,10 +112,27 @@ test('joiners take the best free spot', () => {
   assert.deepEqual(bySeat, { b: 1, c: 2, d: 0 });
 });
 
+test('mates wait in the lobby until anyone opens the booth, and Home takes everyone back', () => {
+  const { room, last } = makeRoom();
+  room.join('a');
+  room.join('b');
+  assert.equal(room.lobbyPayload().started, false, 'everyone starts in the lobby');
+  assert.equal(room.input('a', { type: 'shutter' }), false, 'no photos from the lobby');
+  assert.equal(room.input('b', { type: 'open' }), true);
+  assert.equal(last('lobbyUpdate').data.started, true);
+  assert.equal(room.input('a', { type: 'open' }), false, 'already open');
+  room.join('c');
+  assert.equal(room.lobbyPayload().started, true, 'late joiners go straight into the open booth');
+  assert.equal(room.input('c', { type: 'home' }), true);
+  assert.equal(last('lobbyUpdate').data.started, false);
+  assert.equal(room.input('ghost', { type: 'open' }), false, 'only players in the room');
+});
+
 test('the shutter counts down for everyone, one photo at a time', () => {
   const { room, last, tick } = makeRoom();
   room.join('a');
   room.join('b');
+  room.input('a', { type: 'open' });
   assert.equal(room.input('b', { type: 'shutter' }), true);
   const shutter = last('shutter').data;
   assert.deepEqual(shutter, { n: 1, ms: COUNTDOWN_MS, by: room.players.get('b').name });
@@ -128,6 +145,7 @@ test('the shutter counts down for everyone, one photo at a time', () => {
 test("each person's photo is passed on to everyone else, in pieces", () => {
   const { room, sent, tick } = makeRoom();
   ['a', 'b', 'c'].forEach((id) => room.join(id));
+  room.input('a', { type: 'open' });
   room.input('a', { type: 'shutter' });
   tick(COUNTDOWN_MS);
   const data = `data:image/webp;base64,${'A'.repeat(PART_CHARS * 2)}`;
@@ -147,6 +165,7 @@ test('one photo can only be so big', () => {
   const { room, tick } = makeRoom();
   room.join('a');
   room.join('b');
+  room.input('a', { type: 'open' });
   room.input('a', { type: 'shutter' });
   tick(COUNTDOWN_MS);
   const total = Math.ceil(MAX_STILL_CHARS / PART_CHARS) + 1;
