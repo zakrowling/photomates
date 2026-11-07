@@ -87,7 +87,6 @@
     .brand span { color: var(--accent); }
     .invite { display: flex; align-items: center; gap: 8px; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 4px 4px 4px 12px; }
     .invite code { font-family: inherit; font-weight: 600; letter-spacing: 3px; font-size: 18px; }
-    .invite input { width: 190px; background: transparent; border: none; color: var(--muted); font-size: 14px; }
     .small-btn { padding: 7px 12px; border-radius: 9px; border: none; background: #ece7f3; color: #1d1a22; font-weight: 600; font-size: 15px; }
     .small-btn.ghost { background: transparent; color: var(--muted); border: 1px solid var(--line); }
     .small-btn:hover { filter: brightness(1.08); }
@@ -189,7 +188,6 @@
       <div class="right">
       <div class="invite" id="invite">
         <code id="room-code-txt">----</code>
-        <input type="text" id="share-link" readonly aria-label="Invite link">
         <button class="small-btn" id="copy-btn">Copy invite</button>
       </div>
       <span class="people" id="people"></span>

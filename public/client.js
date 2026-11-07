@@ -3,6 +3,7 @@
 const socket = window.PhotomatesNet.createNet();
 const Scenes = window.PhotomatesScenes;
 const DEBUG = /[?&]debug\b/.test(location.search);
+const inFrame = (() => { try { return window.self !== window.top; } catch { return true; } })();
 
 const $ = (id) => document.getElementById(id);
 const stage = $('stage-canvas');
@@ -122,10 +123,25 @@ function showCameraMsg(text, withButton) {
 }
 $('camera-btn').addEventListener('click', startCamera);
 
+// The part of the camera picture we use: the middle 16:9 of it. Cameras (and browsers inside iframes)
+// sometimes give a squarer 4:3 picture; cropping it rather than stretching it keeps faces the right shape.
+function cameraRect() {
+  const vw = cam.video.videoWidth;
+  const vh = cam.video.videoHeight;
+  const want = PROC_W / PROC_H;
+  if (vw / vh > want) {
+    const w = vh * want;
+    return { sx: (vw - w) / 2, sy: 0, sw: w, sh: vh };
+  }
+  const h = vw / want;
+  return { sx: 0, sy: (vh - h) / 2, sw: vw, sh: h };
+}
+
 // One camera frame: find you (mask) and your face, then pack the square around you for sending.
 function processCamera(now) {
-  if (!cam.ready || cam.video.readyState < 2) return;
-  smallCtx.drawImage(cam.video, 0, 0, PROC_W, PROC_H);
+  if (!cam.ready || cam.video.readyState < 2 || !cam.video.videoWidth) return;
+  const r = cameraRect();
+  smallCtx.drawImage(cam.video, r.sx, r.sy, r.sw, r.sh, 0, 0, PROC_W, PROC_H);
   const ts = Math.max(cam.lastTs + 1, Math.round(now));
   cam.lastTs = ts;
   cam.segmenter.segmentForVideo(cam.small, ts, (result) => {
@@ -252,13 +268,14 @@ function measureBottom(img) {
 // A full-quality photo of you (transparent background) for the finished picture.
 async function captureStill() {
   if (!cam.ready || !cam.video.videoWidth) return null;
-  const vw = cam.video.videoWidth;
-  const scale = vw / PROC_W;
+  // Same crop as the live picture, so the photo lines up exactly with the mask.
+  const r = cameraRect();
+  const scale = r.sw / PROC_W;
   const { x, y, s } = cam.crop;
   const size = Math.min(STILL_SIZE, Math.round(s * scale));
   const out = Object.assign(document.createElement('canvas'), { width: size, height: size });
   const octx = out.getContext('2d', { willReadFrequently: true });
-  octx.drawImage(cam.video, x * scale, y * scale, s * scale, s * scale, 0, 0, size, size);
+  octx.drawImage(cam.video, r.sx + x * scale, r.sy + y * scale, s * scale, s * scale, 0, 0, size, size);
   const m = Object.assign(document.createElement('canvas'), { width: size, height: size });
   const mctx = m.getContext('2d', { willReadFrequently: true });
   mctx.fillStyle = '#000';
@@ -490,7 +507,6 @@ function applyLobby(payload) {
   state.scene = payload.scene;
   state.roomCode = payload.roomCode;
   $('room-code-txt').textContent = payload.roomCode;
-  $('share-link').value = shareLink(payload.roomCode);
   [...$('scene-select').options].forEach((o) => {
     // Scenes with only so many spots take turns when there are more mates than that.
     const cap = Scenes.byId(o.value).capacity;
@@ -572,10 +588,15 @@ $('shuffle-btn').addEventListener('click', () => {
 $('shutter').addEventListener('click', () => socket.emit('input', { type: 'shutter' }));
 $('copy-btn').addEventListener('click', async () => {
   try {
-    await navigator.clipboard.writeText($('share-link').value);
+    await navigator.clipboard.writeText(shareLink(state.roomCode));
   } catch {
-    $('share-link').select();
+    // Older browsers (or iframes without clipboard access): copy from a temporary text box.
+    const t = document.createElement('textarea');
+    t.value = shareLink(state.roomCode);
+    document.body.append(t);
+    t.select();
     document.execCommand('copy');
+    t.remove();
   }
   $('copy-btn').textContent = 'Copied!';
   setTimeout(() => { $('copy-btn').textContent = 'Copy invite'; }, 1500);
@@ -783,6 +804,15 @@ function showResult(url) {
   if (!url) return;
   $('result-img').src = url;
   $('download-btn').href = url;
+  // Inside an iframe downloads are often blocked, so open the photo in a new tab instead (save it from
+  // there with right-click or a long press).
+  if (inFrame) {
+    $('download-btn').removeAttribute('download');
+    $('download-btn').target = '_blank';
+    $('download-btn').rel = 'noopener';
+    $('download-btn').textContent = 'Open photo in new tab';
+    return;
+  }
   const d = new Date();
   const pad = (v) => String(v).padStart(2, '0');
   $('download-btn').download = `photomates-${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}-${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}.png`;
