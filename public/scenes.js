@@ -430,25 +430,26 @@
     tone: 'grayscale(1) sepia(0.12) contrast(1.15) brightness(0.88)',
   });
 
-  // Woodland Creatures (assets/bg/woodland-creatures.jpg): 6 headless animals by a waterfall: a deer, a
-  // meerkat and an emu at the back, a moose, a buffalo and a bear in front.
+  // Mammal Pals (assets/bg/mammal-pals.jpg): 6 headless animals in a sunny meadow: a cheetah, a meerkat
+  // and an emu at the back, a deer, a lion and a bear lying in front.
   const woodland = bodyScene({
     id: 'woodland',
-    name: 'Woodland Creatures',
-    src: 'assets/bg/woodland-creatures.jpg',
+    name: 'Mammal Pals',
+    src: 'assets/bg/mammal-pals.jpg',
     necks: [
-      [638, 135, 49],
-      [645, 364, 56],
-      [467, 158, 45],
-      [807, 158, 41],
-      [352, 357, 50],
-      [941, 353, 56],
+      [651, 122, 47],
+      [658, 369, 63],
+      [487, 124, 52],
+      [847, 157, 47],
+      [370, 380, 63],
+      [1000, 380, 63],
     ],
-    headScale: 4.6,
+    headScale: 4.4,
     sink: 0.9,
-    // Soft, misty forest light.
-    tone: 'saturate(0.9) sepia(0.15) contrast(0.95) brightness(0.98)',
+    // Warm, golden meadow light.
+    tone: 'saturate(0.95) sepia(0.2) contrast(0.96) brightness(1.02)',
   });
+
 
   const SCENES = [office, airplane, beach, brady, bodybuilders, woodland, samurai, christmas, halloween];
   const byId = (id) => SCENES.find((s) => s.id === id) || SCENES[0];
