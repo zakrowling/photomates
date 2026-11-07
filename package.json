@@ -1,0 +1,13 @@
+{
+  "name": "photomates",
+  "version": "1.0.0",
+  "description": "Photomates: a remote group photobooth. Background-removed cameras together in one scene, peer-to-peer on GitHub Pages",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "test": "node --test"
+  },
+  "dependencies": {
+    "express": "^5.3.0"
+  }
+}

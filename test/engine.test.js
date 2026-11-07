@@ -1,0 +1,117 @@
+const test = require('node:test');
+const assert = require('node:assert/strict');
+const { GameRoom, MAX_PLAYERS, COUNTDOWN_MS, MAX_STILL_CHARS, PART_CHARS, SCENES, NAMES } = require('../public/engine.js');
+
+function makeRoom() {
+  const sent = [];
+  let clock = 1_000_000;
+  const room = new GameRoom('TEST', {
+    broadcast: (ev, data) => sent.push({ to: '*', ev, data }),
+    send: (to, ev, data) => sent.push({ to, ev, data }),
+    now: () => clock,
+  });
+  const last = (ev, to) => [...sent].reverse().find((m) => m.ev === ev && (!to || m.to === to));
+  return { room, sent, last, tick: (ms) => { clock += ms; } };
+}
+
+test('players join with unique names and colours, and the first is the host', () => {
+  const { room } = makeRoom();
+  for (let i = 1; i <= 5; i++) assert.equal(room.join(`p${i}`).ok, true);
+  const players = room.lobbyPayload().players;
+  assert.equal(new Set(players.map((p) => p.name)).size, 5);
+  assert.equal(new Set(players.map((p) => p.color)).size, 5);
+  players.forEach((p) => {
+    assert.ok(NAMES.includes(p.name));
+    assert.ok(p.name.length >= 4 && p.name.length <= 5);
+  });
+  assert.equal(room.lobbyPayload().hostId, 'p1');
+  assert.deepEqual(players.map((p) => p.seat), [0, 1, 2, 3, 4]);
+});
+
+test(`the booth holds ${MAX_PLAYERS} mates`, () => {
+  const { room } = makeRoom();
+  for (let i = 0; i < MAX_PLAYERS; i++) assert.equal(room.join(`p${i}`).ok, true);
+  const res = room.join('extra');
+  assert.equal(res.ok, false);
+  assert.match(res.error, /full/);
+});
+
+test('leaving frees the seat and hands hosting on', () => {
+  const { room, last } = makeRoom();
+  ['a', 'b', 'c'].forEach((id) => room.join(id));
+  room.leave('a');
+  const lobby = last('lobbyUpdate').data;
+  assert.equal(lobby.hostId, 'b');
+  assert.deepEqual(lobby.players.map((p) => [p.id, p.seat]), [['b', 0], ['c', 1]]);
+});
+
+test('anyone can switch the scene, to known scenes only', () => {
+  const { room, last } = makeRoom();
+  room.join('a');
+  room.join('b');
+  assert.equal(room.input('b', { type: 'scene', id: 'stadium' }), true);
+  assert.equal(last('lobbyUpdate').data.scene, 'stadium');
+  assert.equal(room.input('b', { type: 'scene', id: 'moon' }), false);
+  assert.equal(room.input('ghost', { type: 'scene', id: 'brady' }), false, 'only players in the room');
+  assert.ok(SCENES.includes(room.scene));
+});
+
+test('shuffle mixes up the seats but keeps everyone', () => {
+  const { room, last } = makeRoom();
+  for (let i = 0; i < 8; i++) room.join(`p${i}`);
+  const before = room.order.join();
+  let changed = false;
+  for (let i = 0; i < 5 && !changed; i++) {
+    room.input('p0', { type: 'shuffle' });
+    changed = room.order.join() !== before;
+  }
+  assert.ok(changed);
+  assert.deepEqual([...room.order].sort(), before.split(',').sort());
+  assert.deepEqual(last('lobbyUpdate').data.players.map((p) => p.seat), [0, 1, 2, 3, 4, 5, 6, 7]);
+});
+
+test('the shutter counts down for everyone, one photo at a time', () => {
+  const { room, last, tick } = makeRoom();
+  room.join('a');
+  room.join('b');
+  assert.equal(room.input('b', { type: 'shutter' }), true);
+  const shutter = last('shutter').data;
+  assert.deepEqual(shutter, { n: 1, ms: COUNTDOWN_MS, by: room.players.get('b').name });
+  assert.equal(room.input('a', { type: 'shutter' }), false, 'already counting down');
+  tick(COUNTDOWN_MS + 2001);
+  assert.equal(room.input('a', { type: 'shutter' }), true);
+  assert.equal(last('shutter').data.n, 2);
+});
+
+test("each person's photo is passed on to everyone else, in pieces", () => {
+  const { room, sent, tick } = makeRoom();
+  ['a', 'b', 'c'].forEach((id) => room.join(id));
+  room.input('a', { type: 'shutter' });
+  tick(COUNTDOWN_MS);
+  const data = `data:image/webp;base64,${'A'.repeat(PART_CHARS * 2)}`;
+  const parts = [0, 1, 2].map((i) => data.slice(i * PART_CHARS, (i + 1) * PART_CHARS));
+  parts.forEach((part, i) => assert.equal(room.input('b', { type: 'stillPart', n: 1, i, total: 3, data: part }), true));
+  const got = sent.filter((m) => m.ev === 'stillPart');
+  assert.deepEqual(got.map((m) => m.to).sort(), ['a', 'a', 'a', 'c', 'c', 'c']);
+  assert.equal(got.filter((m) => m.to === 'a').map((m) => m.data.data).join(''), data);
+  assert.deepEqual(Object.keys(got[0].data).sort(), ['data', 'i', 'id', 'n', 'total']);
+  assert.equal(room.input('c', { type: 'stillPart', n: 7, i: 0, total: 1, data: 'data:image/png;base64,AA' }), false, 'wrong shot');
+  assert.equal(room.input('c', { type: 'stillPart', n: 1, i: 0, total: 1, data: 'javascript:alert(1)' }), false, 'images only');
+  assert.equal(room.input('c', { type: 'stillPart', n: 1, i: 0, total: 1, data: 'A'.repeat(PART_CHARS + 1) }), false, 'pieces are small');
+  assert.equal(room.input('c', { type: 'stillPart', n: 1, i: 3, total: 2, data: 'AA' }), false, 'piece in range');
+});
+
+test('one photo can only be so big', () => {
+  const { room, tick } = makeRoom();
+  room.join('a');
+  room.join('b');
+  room.input('a', { type: 'shutter' });
+  tick(COUNTDOWN_MS);
+  const total = Math.ceil(MAX_STILL_CHARS / PART_CHARS) + 1;
+  let accepted = 0;
+  for (let i = 0; i < total; i++) {
+    const data = (i === 0 ? 'data:image/png;base64,' : '').padEnd(PART_CHARS, 'A');
+    if (room.input('a', { type: 'stillPart', n: 1, i, total: Math.min(total, 43), data })) accepted++;
+  }
+  assert.ok(accepted * PART_CHARS <= MAX_STILL_CHARS);
+});

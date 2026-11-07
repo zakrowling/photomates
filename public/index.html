@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Photomates</title>
+  <meta name="description" content="A group photobooth for remote mates. Everyone's camera, backgrounds removed, together in one scene.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #141218;
+      --panel: #201d26;
+      --line: #36313f;
+      --text: #f6f3fa;
+      --muted: #b9b2c6;
+      --accent: #ff5d8f;
+      --accent-hi: #ff7aa4;
+      --accent-ink: #2a0614;
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; }
+    body {
+      font-family: Fredoka, system-ui, sans-serif;
+      color: var(--text);
+      background: radial-gradient(1200px 600px at 50% -10%, #3a2140 0%, var(--bg) 60%);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 24px 16px 40px;
+    }
+    button, input { font: inherit; color: inherit; }
+    button { cursor: pointer; }
+    [hidden] { display: none !important; }
+    h1 { margin: 0; font-size: 56px; font-weight: 700; letter-spacing: -1px; }
+    h1 span { color: var(--accent); }
+    .subtitle { margin: 4px 0 20px; color: var(--muted); font-size: 19px; text-align: center; }
+
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 22px;
+      padding: 24px;
+      width: 100%;
+      max-width: 460px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.45);
+      text-align: center;
+    }
+    .btn {
+      display: block;
+      width: 100%;
+      margin: 10px 0;
+      padding: 12px 18px;
+      font-size: 20px;
+      font-weight: 600;
+      border: none;
+      border-radius: 14px;
+      background: var(--accent);
+      color: var(--accent-ink);
+      transition: background 0.15s, transform 0.08s;
+    }
+    .btn:hover:not(:disabled) { background: var(--accent-hi); }
+    .btn:active:not(:disabled) { transform: translateY(1px); }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .btn.secondary { background: #ece7f3; color: #1d1a22; }
+    .btn.secondary:hover:not(:disabled) { background: #fff; }
+    .btn.ghost { background: transparent; color: var(--muted); }
+    .btn.ghost:hover:not(:disabled) { color: var(--text); background: rgba(255, 255, 255, 0.06); }
+    .btn:focus-visible, .chip:focus-visible, #shutter:focus-visible { outline: 3px solid #ffd166; outline-offset: 3px; }
+    .or { color: var(--muted); margin: 6px 0; }
+    #room-input {
+      display: block; width: 100%; padding: 10px; font-size: 34px; font-weight: 600; text-align: center;
+      letter-spacing: 10px; text-transform: uppercase; background: #15131a; border: 1px solid var(--line); border-radius: 14px;
+    }
+    .hint { color: var(--muted); font-size: 16px; margin: 8px 0; }
+    .error { color: #ff8fa8; min-height: 1em; margin: 8px 0 0; }
+
+    /* ---------- Booth ---------- */
+    #booth { width: 100%; max-width: 1280px; }
+    body.in-booth header { display: none; }
+    body.in-booth { padding-top: 14px; }
+    .topbar { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; flex-wrap: wrap; }
+    .brand { font-size: 26px; font-weight: 700; margin-right: auto; }
+    .brand span { color: var(--accent); }
+    .invite { display: flex; align-items: center; gap: 8px; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 4px 4px 4px 12px; }
+    .invite code { font-family: inherit; font-weight: 600; letter-spacing: 3px; font-size: 18px; }
+    .invite input { width: 230px; background: transparent; border: none; color: var(--muted); font-size: 14px; }
+    .small-btn { padding: 7px 12px; border-radius: 9px; border: none; background: #ece7f3; color: #1d1a22; font-weight: 600; font-size: 15px; }
+    .small-btn.ghost { background: transparent; color: var(--muted); border: 1px solid var(--line); }
+    .small-btn:hover { filter: brightness(1.08); }
+
+    .stage { position: relative; width: 100%; aspect-ratio: 16 / 9; border-radius: 18px; overflow: hidden; background: #000; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5); }
+    #stage-canvas { display: block; width: 100%; height: 100%; }
+    .overlay { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; flex-direction: column; text-align: center; pointer-events: none; }
+    #countdown { font-size: 220px; font-weight: 700; color: #fff; text-shadow: 0 8px 40px rgba(0, 0, 0, 0.6); }
+    #countdown small { display: block; font-size: 26px; font-weight: 500; }
+    #flash { background: #fff; opacity: 0; transition: opacity 0.6s ease-out; }
+    #flash.on { opacity: 1; transition: none; }
+    #camera-msg { background: rgba(10, 8, 14, 0.7); pointer-events: auto; padding: 20px; }
+    #camera-msg p { max-width: 520px; font-size: 20px; margin: 0 0 12px; }
+    #camera-msg .btn { width: auto; display: inline-block; }
+
+    .controls { display: flex; align-items: center; gap: 12px; margin-top: 14px; flex-wrap: wrap; }
+    .scene-picker { display: flex; gap: 8px; flex-wrap: wrap; }
+    .chip { padding: 9px 16px; border-radius: 999px; border: 1px solid var(--line); background: var(--panel); color: var(--text); font-size: 17px; font-weight: 500; }
+    .chip[aria-pressed="true"] { background: var(--text); color: #1d1a22; border-color: var(--text); }
+    .spacer { flex: 1; }
+    #shutter {
+      display: flex; align-items: center; gap: 10px; padding: 12px 26px 12px 14px; border-radius: 999px; border: none;
+      background: var(--accent); color: var(--accent-ink); font-size: 22px; font-weight: 700; box-shadow: 0 8px 24px rgba(255, 93, 143, 0.35);
+    }
+    #shutter:hover:not(:disabled) { background: var(--accent-hi); }
+    #shutter:disabled { opacity: 0.6; cursor: default; }
+    #shutter .lens { width: 34px; height: 34px; border-radius: 50%; background: #fff; border: 6px solid var(--accent-ink); }
+    .people { color: var(--muted); font-size: 16px; }
+
+    #result { position: fixed; inset: 0; background: rgba(8, 6, 12, 0.82); display: flex; align-items: center; justify-content: center; padding: 24px; z-index: 10; }
+    .result-card { background: var(--panel); border: 1px solid var(--line); border-radius: 20px; padding: 18px; max-width: 1100px; width: 100%; text-align: center; }
+    .result-card h2 { margin: 0 0 12px; font-size: 28px; }
+    #result-img { width: 100%; border-radius: 12px; display: block; background: #000; }
+    .result-actions { display: flex; gap: 10px; justify-content: center; margin-top: 14px; flex-wrap: wrap; }
+    .result-actions .btn { width: auto; margin: 0; padding: 12px 26px; }
+    #result-wait { color: var(--muted); margin: 40px 0; font-size: 20px; }
+    #videos { position: fixed; left: -10000px; top: 0; width: 1px; height: 1px; overflow: hidden; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Photo<span>mates</span></h1>
+    <p class="subtitle">A group photobooth for remote mates. Backgrounds off, everyone together, say cheese.</p>
+  </header>
+
+  <div id="lobby-card" class="card">
+    <div id="setup-view">
+      <button class="btn" id="create-btn">Create a booth</button>
+      <div class="or">or join one</div>
+      <input type="text" id="room-input" maxlength="4" placeholder="CODE" autocomplete="off" aria-label="Room code">
+      <button class="btn secondary" id="join-btn">Join</button>
+    </div>
+    <p class="hint" id="connecting-hint" hidden>Connecting...</p>
+    <p class="error" id="error-msg" role="alert"></p>
+    <p class="hint">Works best in Chrome or Edge on a laptop or desktop. Your camera only goes to the mates in your booth.</p>
+  </div>
+
+  <div id="booth" hidden>
+    <div class="topbar">
+      <div class="brand">Photo<span>mates</span></div>
+      <div class="invite" id="invite">
+        <code id="room-code-txt">----</code>
+        <input type="text" id="share-link" readonly aria-label="Invite link">
+        <button class="small-btn" id="copy-btn">Copy invite</button>
+      </div>
+      <span class="people" id="people"></span>
+      <button class="small-btn ghost" id="leave-btn">Leave</button>
+    </div>
+
+    <div class="stage">
+      <canvas id="stage-canvas" width="1280" height="720"></canvas>
+      <div class="overlay" id="camera-msg" hidden>
+        <p id="camera-text">Photomates needs your camera to put you in the picture.</p>
+        <button class="btn" id="camera-btn">Turn on camera</button>
+      </div>
+      <div class="overlay" id="countdown" hidden></div>
+      <div class="overlay" id="flash"></div>
+      <p class="hint" id="reconnect-hint" hidden style="position:absolute;left:0;right:0;bottom:8px;text-align:center"></p>
+    </div>
+
+    <div class="controls">
+      <div class="scene-picker" id="scene-picker" role="group" aria-label="Scene"></div>
+      <button class="chip" id="shuffle-btn">Shuffle seats</button>
+      <span class="spacer"></span>
+      <button id="shutter"><span class="lens" aria-hidden="true"></span>Take photo</button>
+    </div>
+  </div>
+
+  <div id="result" hidden>
+    <div class="result-card">
+      <h2 id="result-title">Your photo</h2>
+      <p id="result-wait">Developing...</p>
+      <img id="result-img" alt="Group photo" hidden>
+      <div class="result-actions">
+        <a class="btn" id="download-btn" download="photomates.png" hidden>Download PNG</a>
+        <button class="btn secondary" id="close-result">Back to the booth</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="videos" aria-hidden="true"></div>
+
+  <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+  <script src="config.js?v=__BUILD__"></script>
+  <script src="engine.js?v=__BUILD__"></script>
+  <script src="scenes.js?v=__BUILD__"></script>
+  <script src="net.js?v=__BUILD__"></script>
+  <script type="module" src="client.js?v=__BUILD__"></script>
+</body>
+</html>
