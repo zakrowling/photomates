@@ -264,11 +264,13 @@
   // of a neck: necks are [x, y, width] for the middle of each neck's top edge on the stage. Heads are
   // sized from the neck's width and placed so the chin sits a little over the neck top.
   const CHIN_AT = 0.585; // how far down each person's picture their chin is (see updateCrop in client.js)
-  function bodyScene({ id, name, src, necks, tone, headScale = 5.1, sides = '#0a0d16', sink = 0.75 }) {
+  function bodyScene({ id, name, src, necks, tone, headScale = 5.1, sides = '#0a0d16', sink = 0.75, aspect = 1.5 }) {
     return {
       id,
       name,
       kind: 'heads',
+      // The photo's own shape: the booth and the finished photo are cropped to it.
+      frame: () => Math.round(H * aspect),
       capacity: necks.length,
       tone,
       seats: necks.map(([x, y, w]) => {
@@ -347,6 +349,8 @@
     name: 'The Matey Bunch',
     kind: 'grid',
     cells: (n) => (usesPhotoGrid(n) ? MATEY_CELLS : bradyCells(n)),
+    // The 4:3 title card when it's in use, otherwise the full stage.
+    frame: (n) => (usesPhotoGrid(n) ? 960 : W),
     tone: 'saturate(1.12) contrast(1.05)',
     // A TV title card: crisp cut-outs, no soft edges.
     hardEdges: true,
@@ -689,5 +693,12 @@
     c.restore();
   }
 
-  return { W, H, SCENES, layout, slots, assign, fillUp, render, byId, bradyCells };
+  // How wide (on the 1280×720 stage) a scene's picture is, centred: photos that aren't 16:9 are cropped
+  // to their own shape instead of showing bands either side.
+  function frameWidth(sceneId, n) {
+    const scene = byId(sceneId);
+    return scene.frame ? Math.min(W, scene.frame(n)) : W;
+  }
+
+  return { W, H, SCENES, frameWidth, layout, slots, assign, fillUp, render, byId, bradyCells };
 });

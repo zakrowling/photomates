@@ -68,7 +68,7 @@
     .btn.secondary:hover:not(:disabled) { background: #fff; }
     .btn.ghost { background: transparent; color: var(--muted); }
     .btn.ghost:hover:not(:disabled) { color: var(--text); background: rgba(255, 255, 255, 0.06); }
-    .btn:focus-visible, .chip:focus-visible, #shutter:focus-visible { outline: 3px solid #ffd166; outline-offset: 3px; }
+    .btn:focus-visible, .chip:focus-visible, #shutter:focus-visible, #scene-select:focus-visible { outline: 3px solid #ffd166; outline-offset: 3px; }
     .or { color: var(--muted); margin: 6px 0; }
     #room-input {
       display: block; width: 100%; padding: 10px; font-size: 34px; font-weight: 600; text-align: center;
@@ -91,7 +91,7 @@
     .small-btn.ghost { background: transparent; color: var(--muted); border: 1px solid var(--line); }
     .small-btn:hover { filter: brightness(1.08); }
 
-    .stage { position: relative; width: 100%; aspect-ratio: 16 / 9; border-radius: 18px; overflow: hidden; background: #000; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5); }
+    .stage { position: relative; width: 100%; margin: 0 auto; aspect-ratio: 16 / 9; border-radius: 18px; overflow: hidden; background: #000; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5); }
     #stage-canvas { display: block; width: 100%; height: 100%; }
     .overlay { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; flex-direction: column; text-align: center; pointer-events: none; }
     #countdown { font-size: 220px; font-weight: 700; color: #fff; text-shadow: 0 8px 40px rgba(0, 0, 0, 0.6); }
@@ -103,7 +103,22 @@
     #camera-msg .btn { width: auto; display: inline-block; }
 
     .controls { display: flex; align-items: center; gap: 12px; margin-top: 14px; flex-wrap: wrap; }
-    .scene-picker { display: flex; gap: 8px; flex-wrap: wrap; }
+    .scene-picker { position: relative; display: flex; align-items: center; gap: 12px; }
+    .scene-picker label { color: var(--muted); font-size: 17px; font-weight: 500; }
+    .scene-picker .select-wrap { position: relative; }
+    #scene-select {
+      appearance: none; -webkit-appearance: none; min-width: 260px; padding: 12px 52px 12px 20px;
+      font: inherit; font-size: 22px; font-weight: 600; color: var(--text); cursor: pointer;
+      background: var(--panel); border: 2px solid var(--line); border-radius: 16px;
+      box-shadow: 0 6px 18px rgba(0, 0, 0, 0.3); transition: border-color 0.15s, background 0.15s;
+    }
+    #scene-select:hover { border-color: var(--accent); background: #28232f; }
+    #scene-select option { background: var(--panel); color: var(--text); font-size: 18px; }
+    #scene-select option:disabled { color: #6f6880; }
+    .select-wrap::after {
+      content: ''; position: absolute; right: 20px; top: 50%; width: 10px; height: 10px; pointer-events: none;
+      border-right: 3px solid var(--accent); border-bottom: 3px solid var(--accent); transform: translateY(-70%) rotate(45deg);
+    }
     .chip { padding: 9px 16px; border-radius: 999px; border: 1px solid var(--line); background: var(--panel); color: var(--text); font-size: 17px; font-weight: 500; }
     .chip[aria-pressed="true"] { background: var(--text); color: #1d1a22; border-color: var(--text); }
     .chip:disabled { opacity: 0.45; cursor: not-allowed; }
@@ -129,7 +144,7 @@
     .gallery-strip { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 6px; }
     .thumb { flex: none; padding: 0; border: 2px solid var(--line); border-radius: 10px; overflow: hidden; background: #000; width: 176px; aspect-ratio: 16 / 9; }
     .thumb:hover, .thumb:focus-visible { border-color: var(--accent); outline: none; }
-    .thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .thumb img { width: 100%; height: 100%; object-fit: contain; display: block; }
     #videos { position: fixed; left: -10000px; top: 0; width: 1px; height: 1px; overflow: hidden; }
   </style>
 </head>
@@ -175,7 +190,10 @@
     </div>
 
     <div class="controls">
-      <div class="scene-picker" id="scene-picker" role="group" aria-label="Scene"></div>
+      <div class="scene-picker">
+        <label for="scene-select">Scene</label>
+        <div class="select-wrap"><select id="scene-select"></select></div>
+      </div>
       <button class="chip" id="shuffle-btn">Shuffle seats</button>
       <span class="spacer"></span>
       <button id="shutter"><span class="lens" aria-hidden="true"></span>Take photo</button>

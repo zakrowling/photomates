@@ -99,3 +99,10 @@ test('empty spots are filled by repeating the people who are there', () => {
   const ghost = { seat: 0, image: null };
   assert.equal(Scenes.fillUp(spots, Scenes.assign(spots, [ghost])).size, 1);
 });
+
+test('scenes are cropped to the shape of their photo', () => {
+  assert.equal(Scenes.frameWidth('office', 3), Scenes.W);
+  assert.equal(Scenes.frameWidth('brady', 3), 960, 'the 4:3 title card');
+  assert.equal(Scenes.frameWidth('brady', 10), Scenes.W, 'the drawn grid for big groups');
+  ['bodybuilders', 'samurai', 'christmas'].forEach((id) => assert.equal(Scenes.frameWidth(id, 2), 1080, id));
+});

@@ -401,7 +401,15 @@ setInterval(() => {
 function frame(now) {
   requestAnimationFrame(frame);
   if (!state.inBooth) return;
-  sctx.setTransform(1, 0, 0, 1, 0, 0);
+  // The booth is cropped to the scene's own shape.
+  const fw = Scenes.frameWidth(state.scene, state.players.length);
+  if (stage.width !== fw) {
+    stage.width = fw;
+    const box = document.querySelector('.stage');
+    box.style.aspectRatio = `${fw} / ${Scenes.H}`;
+    box.style.width = `${(fw / Scenes.W) * 100}%`;
+  }
+  sctx.setTransform(1, 0, 0, 1, -(Scenes.W - fw) / 2, 0);
   Scenes.render(sctx, state.scene, livePeople(now));
 }
 requestAnimationFrame(frame);
@@ -462,14 +470,18 @@ function shareLink(code) {
 }
 
 function buildScenePicker() {
-  $('scene-picker').replaceChildren(...Scenes.SCENES.map((s) => {
-    const b = document.createElement('button');
-    b.className = 'chip';
-    b.dataset.scene = s.id;
-    b.textContent = s.name;
-    b.addEventListener('click', () => socket.emit('input', { type: 'scene', id: s.id }));
-    return b;
+  const select = $('scene-select');
+  select.replaceChildren(...Scenes.SCENES.map((s) => {
+    const o = document.createElement('option');
+    o.value = s.id;
+    o.textContent = s.name;
+    return o;
   }));
+  select.addEventListener('change', () => {
+    socket.emit('input', { type: 'scene', id: select.value });
+    // Show the room's scene until the host confirms the change.
+    select.value = state.scene;
+  });
 }
 
 function applyLobby(payload) {
@@ -479,13 +491,14 @@ function applyLobby(payload) {
   state.roomCode = payload.roomCode;
   $('room-code-txt').textContent = payload.roomCode;
   $('share-link').value = shareLink(payload.roomCode);
-  document.querySelectorAll('#scene-picker .chip').forEach((b) => {
-    b.setAttribute('aria-pressed', String(b.dataset.scene === state.scene));
-    // Face-in-hole boards only have so many holes.
-    const cap = Scenes.byId(b.dataset.scene).capacity;
-    b.disabled = !!cap && payload.players.length > cap && b.dataset.scene !== state.scene;
-    b.title = cap ? `Up to ${cap} mates` : '';
+  [...$('scene-select').options].forEach((o) => {
+    // Scenes with only so many spots are off when there are more mates than that.
+    const cap = Scenes.byId(o.value).capacity;
+    const tooMany = !!cap && payload.players.length > cap;
+    o.disabled = tooMany && o.value !== state.scene;
+    o.textContent = `${Scenes.byId(o.value).name}${tooMany ? ` (up to ${cap})` : ''}`;
   });
+  $('scene-select').value = state.scene;
   const n = state.players.length;
   $('people').textContent = `${n} in the booth`;
   $('shuffle-btn').disabled = Scenes.slots(state.scene, n).length < 2;
@@ -706,9 +719,11 @@ function loadImage(src) {
 // The finished photo, at twice the stage size, from everyone's full-quality photos.
 async function compose(shot) {
   const scale = 2;
-  const out = Object.assign(document.createElement('canvas'), { width: Scenes.W * scale, height: Scenes.H * scale });
+  const fw = Scenes.frameWidth(shot.scene, shot.players.length);
+  const out = Object.assign(document.createElement('canvas'), { width: fw * scale, height: Scenes.H * scale });
   const c = out.getContext('2d');
   c.scale(scale, scale);
+  c.translate(-(Scenes.W - fw) / 2, 0);
   const people = shot.players.map((p) => {
     const live = cutouts.get(p.id);
     const still = shot.stills.get(p.id);
@@ -723,7 +738,7 @@ async function compose(shot) {
   c.fillStyle = 'rgba(255,255,255,0.7)';
   c.shadowColor = 'rgba(0,0,0,0.5)';
   c.shadowBlur = 4;
-  c.fillText('photomates', Scenes.W - 16, Scenes.H - 14);
+  c.fillText('photomates', (Scenes.W + fw) / 2 - 16, Scenes.H - 14);
   const blob = await new Promise((resolve) => out.toBlob(resolve, 'image/png'));
   if (state.pending !== shot) return;
   state.pending = null;
