@@ -26,7 +26,7 @@ const state = {
   linkRoom: false,
   roomCode: '',
   players: [], // from the host, in seat order: { id, number, name, color, seat }
-  scene: 'theatre',
+  scene: 'office',
   inBooth: false,
   pending: null, // the photo being taken: { n, scene, players, stills: Map(id -> Image), mine }
   stillsEarly: new Map(), // photos that arrived before our own countdown finished: n -> Map

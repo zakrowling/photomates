@@ -33,7 +33,7 @@ test('on your own, you sit in the middle', () => {
 });
 
 test('row scenes put the front row in front: bigger people further down', () => {
-  for (const id of ['theatre', 'stadium']) {
+  for (const id of ['office', 'outdoor', 'stadium']) {
     const seats = Scenes.layout(id, MAX_PLAYERS);
     const byRow = new Map();
     seats.forEach((s) => byRow.set(s.row, s));

@@ -1,6 +1,6 @@
 // Photomates scenes: where everyone sits and what's drawn around them, on a 1280×720 stage.
 // Each person is a square, background-removed picture (head near the top, shoulders at the bottom).
-// Row scenes (theatre, stadium) draw back to front: a row's seats, then the people sitting in them,
+// Row scenes (office, outdoor theatre, stadium) draw back to front: a row's seats, then the people sitting in them,
 // then whatever is in front of that row (a bench, the next row of seats), which hides their lower half
 // so everyone looks like they're really sitting there. Shared by the browser and the Node tests.
 (function (root, factory) {
@@ -69,36 +69,66 @@
     c.restore();
   }
 
-  // ---------- Theatre: a tiered auditorium (photo: assets/bg/auditorium.jpg) ----------
+  // A scene made from a straight-on photo of rows of seats. rows (on the 1280×720 stage, back to front):
+  // bench is the edge that hides people's lower half (a desk top, a step's front edge), faceY is where a
+  // seated face goes, size is how big people are in that row, xs are the seats' centres.
+  function photoScene({ id, name, src, rows, priority, solo, tone, benchShadow = 0.5 }) {
+    return {
+      id,
+      name,
+      kind: 'rows',
+      rows,
+      priority,
+      solo,
+      tone,
+      benchShadow,
+      background(c) {
+        drawPhoto(c, src);
+      },
+      seatBacks() {},
+      front(c, r) {
+        drawPhoto(c, src, rows[r].bench);
+      },
+    };
+  }
 
-  // Measured from the photo, on the 1280×720 stage: each row's desk top (bench), where a seated face
-  // goes (just above the chair back), how big people are in that row, and the chairs' centres.
-  const THEATRE_PHOTO = 'assets/bg/auditorium.jpg';
-  const THEATRE_ROWS = [
-    { bench: 298, faceY: 232, size: 140, xs: [168, 406, 643, 880, 1117] },
-    { bench: 368, faceY: 291, size: 164, xs: [252, 512, 773, 1035] },
-    { bench: 468, faceY: 378, size: 191, xs: [87, 363, 643, 923, 1199] },
-    { bench: 645, faceY: 521, size: 263, xs: [160, 483, 804, 1128] },
-  ];
-
-  const theatre = {
-    id: 'theatre',
-    name: 'Theatre',
-    kind: 'rows',
-    rows: THEATRE_ROWS,
+  // Office: a tiered auditorium with desks (assets/bg/office.jpg). Faces go just above the chair backs.
+  const office = photoScene({
+    id: 'office',
+    name: 'Office',
+    src: 'assets/bg/office.jpg',
+    rows: [
+      { bench: 298, faceY: 232, size: 140, xs: [168, 406, 643, 880, 1117] },
+      { bench: 368, faceY: 291, size: 164, xs: [252, 512, 773, 1035] },
+      { bench: 468, faceY: 378, size: 191, xs: [87, 363, 643, 923, 1199] },
+      { bench: 645, faceY: 521, size: 263, xs: [160, 483, 804, 1128] },
+    ],
     // Front row first, then fanning out and back.
     priority: [[3, 1], [3, 2], [2, 2], [3, 0], [3, 3], [2, 1], [2, 3], [1, 1], [1, 2], [2, 0], [2, 4], [1, 0], [1, 3], [0, 2]],
     solo: [2, 2],
-    background(c) {
-      drawPhoto(c, THEATRE_PHOTO);
-    },
-    seatBacks() {},
-    front(c, r) {
-      drawPhoto(c, THEATRE_PHOTO, THEATRE_ROWS[r].bench);
-    },
     // The photo is warm and evenly lit: warm webcams up a touch and soften their contrast to match.
     tone: 'saturate(0.92) sepia(0.12) contrast(0.97) brightness(0.97)',
-  };
+  });
+
+  // Outdoor Theatre: sunny concrete steps among trees (assets/bg/outdoor-theatre.jpg). Everyone sits on
+  // a step, and its front edge hides them from the seat down.
+  const steps = (bench, size, xs) => ({ bench, faceY: Math.round(bench - size * 0.47), size, xs });
+  const outdoor = photoScene({
+    id: 'outdoor',
+    name: 'Outdoor Theatre',
+    src: 'assets/bg/outdoor-theatre.jpg',
+    rows: [
+      steps(401, 150, [240, 440, 640, 840, 1040]),
+      steps(480, 170, [325, 535, 745, 955]),
+      steps(562, 195, [180, 410, 640, 870, 1100]),
+      steps(666, 225, [290, 520, 760, 990]),
+    ],
+    priority: [[3, 1], [3, 2], [2, 2], [3, 0], [3, 3], [2, 1], [2, 3], [1, 1], [1, 2], [2, 0], [2, 4], [1, 0], [1, 3], [0, 2]],
+    solo: [2, 2],
+    // Bright, slightly cool daylight; only a faint shadow where they meet the step.
+    tone: 'saturate(0.95) contrast(1.04) brightness(1.06)',
+    benchShadow: 0.25,
+  });
 
   // ---------- Stadium: rows of blue plastic seats ----------
 
@@ -197,7 +227,7 @@
     tone: 'saturate(1.12) contrast(1.05)',
   };
 
-  const SCENES = [theatre, stadium, brady];
+  const SCENES = [office, outdoor, stadium, brady];
   const byId = (id) => SCENES.find((s) => s.id === id) || SCENES[0];
 
   // Seat rectangles (where each person's square picture goes) for n people, in seat order.
@@ -303,11 +333,11 @@
     t.drawImage(person.image, 0, 0, px, px);
     t.filter = 'none';
     if (rows) {
-      // The desk's shadow across their lower body.
+      // The desk's (or step's) shadow across their lower body.
       const benchY = (s.bench - y) * res;
       const g = t.createLinearGradient(0, benchY - size * 0.22 * res, 0, benchY);
       g.addColorStop(0, 'rgba(25,12,0,0)');
-      g.addColorStop(1, 'rgba(25,12,0,0.5)');
+      g.addColorStop(1, `rgba(25,12,0,${scene.benchShadow ?? 0.5})`);
       t.globalCompositeOperation = 'source-atop';
       t.fillStyle = g;
       t.fillRect(0, 0, px, px);

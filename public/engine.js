@@ -11,7 +11,7 @@
   const MAX_STILL_CHARS = 600_000; // a data: URL for one person's photo
   const PART_CHARS = 14000; // PeerJS sends at most ~16KB per message, so photos go in pieces
   const MAX_PARTS = Math.ceil(MAX_STILL_CHARS / PART_CHARS);
-  const SCENES = ['theatre', 'stadium', 'brady'];
+  const SCENES = ['office', 'outdoor', 'stadium', 'brady'];
   const ROOM_CODE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
   const COLORS = [
     '#ff5d8f', '#3fa7ff', '#ffb52e', '#36c98e', '#a46bff', '#ff7a45',
