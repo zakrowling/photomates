@@ -466,9 +466,9 @@
       tone,
       frame: () => Math.round(H * aspect),
       seats: rings.map(([cx, cy, hole, outer, bottom]) => {
-        // Shoulders about as wide as the hole, chest sinking below the front rim of the ring.
+        // Chin at the hole's middle, so their head pokes up out of the ring and their chest fills the hole.
         const size = hole * 2 * fit;
-        return { x: cx - size / 2, y: cy + hole * 0.3 - 0.8 * size, size, ring: { cx, cy, hole, outer, bottom } };
+        return { x: cx - size / 2, y: cy - 0.63 * size, size, ring: { cx, cy, hole, outer, bottom } };
       }),
       draw(c, clip) {
         const img = photo(src);
@@ -488,22 +488,19 @@
     };
   }
 
-  // The front of a ring: everything below the front (lower) inner edge of its hole, so the body shows
-  // inside the hole and disappears behind the ring's front rim. The sides of the ring cover the arms.
+  // The ring in front of each person: everything from the hole's middle down, except the hole itself. So the
+  // person shows inside the hole, their bottom follows the front rim (an oval), and the ring's sides cover
+  // their shoulders.
   function ringFront(r) {
     return (c) => {
-      const ry = r.hole * 0.45; // the hole is an ellipse, seen from above at an angle
+      const ry = r.hole * 0.28; // the hole is an ellipse, seen from above at an angle
       c.beginPath();
-      c.moveTo(r.cx - r.outer - 6, r.cy - ry * 0.2);
-      c.lineTo(r.cx - r.hole, r.cy);
-      // Clockwise from the left of the hole round its front (lower) edge: the cut-out shows inside the hole
-      // down to the front rim, an oval bottom, as if they're sitting in the ring.
-      c.ellipse(r.cx, r.cy, r.hole, ry, 0, Math.PI, 0, false);
-      c.lineTo(r.cx + r.outer + 6, r.cy - ry * 0.2);
-      c.lineTo(r.cx + r.outer + 6, r.bottom + 30);
-      c.lineTo(r.cx - r.outer - 6, r.bottom + 30);
+      c.rect(r.cx - r.outer - 6, r.cy, (r.outer + 6) * 2, r.bottom + 30 - r.cy);
+      // Only the front half of the hole is cut out, so their body shows through it down to the front rim.
+      c.moveTo(r.cx + r.hole, r.cy);
+      c.ellipse(r.cx, r.cy, r.hole, ry, 0, 0, Math.PI);
       c.closePath();
-      c.clip();
+      c.clip('evenodd');
     };
   }
 
@@ -514,12 +511,12 @@
     name: 'Tiki Pool Bar',
     src: 'assets/bg/tiki-pool-bar.jpg',
     rings: [
-      [644, 500, 68, 142, 594],
-      [638, 320, 61, 117, 392],
-      [284, 493, 63, 147, 583],
-      [1000, 504, 70, 144, 591],
-      [330, 320, 74, 121, 387],
-      [953, 322, 63, 117, 393],
+      [646, 501, 66, 142, 594],
+      [638, 326, 61, 116, 390],
+      [287, 493, 66, 147, 584],
+      [1001, 507, 70, 144, 589],
+      [330, 325, 58, 120, 385],
+      [954, 329, 63, 118, 393],
     ],
     // Bright tropical sun on wet skin.
     tone: 'saturate(1.08) contrast(1.04) brightness(1.05)',
