@@ -394,7 +394,25 @@
     benchShadow: 0.35,
   });
 
-  const SCENES = [office, airplane, brady, bodybuilders, samurai, christmas];
+  // Halloween (assets/bg/halloween.jpg): an old black-and-white photo of 6 headless monsters (vampire,
+  // mummy, Frankenstein's monster at the back; ghost bride, werewolf, skeleton in front). Faces are made
+  // black and white with the same faded contrast.
+  const halloween = bodyScene({
+    id: 'halloween',
+    name: 'Halloween',
+    src: 'assets/bg/halloween.jpg',
+    necks: [
+      [638, 108, 47],
+      [638, 358, 52],
+      [404, 83, 41],
+      [879, 72, 43],
+      [370, 353, 41],
+      [935, 378, 43],
+    ],
+    tone: 'grayscale(1) sepia(0.12) contrast(1.15) brightness(0.88)',
+  });
+
+  const SCENES = [office, airplane, brady, bodybuilders, samurai, christmas, halloween];
   const byId = (id) => SCENES.find((s) => s.id === id) || SCENES[0];
 
   // Seat rectangles (where each person's square picture goes) for n people, in seat order.

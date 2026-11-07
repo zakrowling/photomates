@@ -54,7 +54,7 @@ test('the Brady Bunch grid grows with the group', () => {
   assert.ok(Scenes.bradyCells(12).length >= 12);
 });
 
-for (const id of ['bodybuilders', 'samurai', 'christmas']) test(`${id} have a head for each of their 6 necks`, () => {
+for (const id of ['bodybuilders', 'samurai', 'christmas', 'halloween']) test(`${id} have a head for each of their 6 necks`, () => {
   const scene = Scenes.byId(id);
   assert.equal(scene.capacity, 6);
   const seats = Scenes.layout(id, 12);
@@ -104,5 +104,5 @@ test('scenes are cropped to the shape of their photo', () => {
   assert.equal(Scenes.frameWidth('office', 3), Scenes.W);
   assert.equal(Scenes.frameWidth('brady', 3), 960, 'the 4:3 title card');
   assert.equal(Scenes.frameWidth('brady', 10), Scenes.W, 'the drawn grid for big groups');
-  ['bodybuilders', 'samurai', 'christmas'].forEach((id) => assert.equal(Scenes.frameWidth(id, 2), 1080, id));
+  ['bodybuilders', 'samurai', 'christmas', 'halloween'].forEach((id) => assert.equal(Scenes.frameWidth(id, 2), 1080, id));
 });

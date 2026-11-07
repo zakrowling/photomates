@@ -12,7 +12,7 @@
   const MAX_STILL_CHARS = 600_000; // a data: URL for one person's photo
   const PART_CHARS = 14000; // PeerJS sends at most ~16KB per message, so photos go in pieces
   const MAX_PARTS = Math.ceil(MAX_STILL_CHARS / PART_CHARS);
-  const SCENES = ['office', 'airplane', 'brady', 'bodybuilders', 'samurai', 'christmas'];
+  const SCENES = ['office', 'airplane', 'brady', 'bodybuilders', 'samurai', 'christmas', 'halloween'];
   // Any well-formed scene name is allowed (not just SCENES), so adding a scene never needs every host
   // to update; browsers that don't know a scene show the first one instead.
   const SCENE_ID = /^[a-z][a-z0-9-]{1,23}$/;
