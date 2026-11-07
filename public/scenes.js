@@ -451,7 +451,81 @@
   });
 
 
-  const SCENES = [office, airplane, beach, brady, bodybuilders, woodland, samurai, christmas, halloween];
+  // ---------- People in pool rings ----------
+
+  // A photo of empty pool rings. Each person pops up out of a ring's hole: they're sized to fit the hole,
+  // and the front of the ring (and the water) is drawn back over them, so only their top half shows.
+  // rings are [hole centre x, hole centre y (the water line), hole half-width, ring half-width, ring
+  // bottom y] on the stage.
+  function ringScene({ id, name, src, rings, tone, fit = 1.45, aspect = 1.5 }) {
+    return {
+      id,
+      name,
+      kind: 'rings',
+      capacity: rings.length,
+      tone,
+      frame: () => Math.round(H * aspect),
+      seats: rings.map(([cx, cy, hole, outer, bottom]) => {
+        // Shoulders about as wide as the hole, chest sinking below the front rim of the ring.
+        const size = hole * 2 * fit;
+        return { x: cx - size / 2, y: cy + hole * 0.3 - 0.8 * size, size, ring: { cx, cy, hole, outer, bottom } };
+      }),
+      draw(c, clip) {
+        const img = photo(src);
+        if (!img) {
+          if (!clip) {
+            c.fillStyle = '#3aa6c6';
+            c.fillRect(0, 0, W, H);
+          }
+          return;
+        }
+        const k = H / img.naturalHeight;
+        c.save();
+        if (clip) clip(c);
+        c.drawImage(img, (W - img.naturalWidth * k) / 2, 0, img.naturalWidth * k, H);
+        c.restore();
+      },
+    };
+  }
+
+  // The front of a ring: everything below the front (lower) inner edge of its hole, so the body shows
+  // inside the hole and disappears behind the ring's front rim. The sides of the ring cover the arms.
+  function ringFront(r) {
+    return (c) => {
+      const ry = r.hole * 0.45; // the hole is an ellipse, seen from above at an angle
+      c.beginPath();
+      c.moveTo(r.cx - r.outer - 6, r.cy - ry * 0.2);
+      c.lineTo(r.cx - r.hole, r.cy);
+      // Clockwise from the left of the hole round its front (lower) edge: the cut-out shows inside the hole
+      // down to the front rim, an oval bottom, as if they're sitting in the ring.
+      c.ellipse(r.cx, r.cy, r.hole, ry, 0, Math.PI, 0, false);
+      c.lineTo(r.cx + r.outer + 6, r.cy - ry * 0.2);
+      c.lineTo(r.cx + r.outer + 6, r.bottom + 30);
+      c.lineTo(r.cx - r.outer - 6, r.bottom + 30);
+      c.closePath();
+      c.clip();
+    };
+  }
+
+  // Tiki Pool Bar (assets/bg/tiki-pool-bar.jpg): 6 pool rings in front of a thatched bar. Front middle
+  // first, then the back middle, then outwards.
+  const tiki = ringScene({
+    id: 'tiki',
+    name: 'Tiki Pool Bar',
+    src: 'assets/bg/tiki-pool-bar.jpg',
+    rings: [
+      [644, 500, 68, 142, 594],
+      [638, 320, 61, 117, 392],
+      [284, 493, 63, 147, 583],
+      [1000, 504, 70, 144, 591],
+      [330, 320, 74, 121, 387],
+      [953, 322, 63, 117, 393],
+    ],
+    // Bright tropical sun on wet skin.
+    tone: 'saturate(1.08) contrast(1.04) brightness(1.05)',
+  });
+
+  const SCENES = [office, airplane, tiki, beach, brady, bodybuilders, woodland, samurai, christmas, halloween];
   const byId = (id) => SCENES.find((s) => s.id === id) || SCENES[0];
 
   // Seat rectangles (where each person's square picture goes) for n people, in seat order.
@@ -464,7 +538,7 @@
   // Every spot in a scene for a group of n, best first (spot 0 is where someone on their own goes).
   function slots(sceneId, n) {
     const scene = byId(sceneId);
-    if (scene.kind === 'holes' || scene.kind === 'heads') return scene.seats;
+    if (scene.kind === 'holes' || scene.kind === 'heads' || scene.kind === 'rings') return scene.seats;
     if (scene.kind === 'grid') return layoutCells(scene.cells(n));
     const solo = scene.solo || [1, 2];
     const order = n === 1 ? [solo, ...scene.priority.filter(([r, i]) => r !== solo[0] || i !== solo[1])] : scene.priority;
@@ -528,7 +602,17 @@
     const seats = slots(sceneId, people.length);
     const at = fillUp(seats, assign(seats, people));
     c.save();
-    if (scene.kind === 'heads') {
+    if (scene.kind === 'rings') {
+      // Back rings first, so the front rings overlap them.
+      scene.draw(c);
+      seats
+        .map((s, i) => ({ s, p: at.get(i) }))
+        .sort((a, b) => a.s.ring.cy - b.s.ring.cy)
+        .forEach(({ s, p }) => {
+          drawPerson(c, p, s, scene);
+          if (p) scene.draw(c, ringFront(s.ring));
+        });
+    } else if (scene.kind === 'heads') {
       // The bodies, then everyone's head on top, back to front (higher necks are further back).
       scene.draw(c);
       seats

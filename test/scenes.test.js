@@ -106,3 +106,13 @@ test('scenes are cropped to the shape of their photo', () => {
   assert.equal(Scenes.frameWidth('brady', 10), Scenes.W, 'the drawn grid for big groups');
   ['bodybuilders', 'samurai', 'christmas', 'halloween'].forEach((id) => assert.equal(Scenes.frameWidth(id, 2), 1080, id));
 });
+
+test('the tiki pool bar puts everyone in a ring, sized to fit its hole', () => {
+  const seats = Scenes.layout('tiki', 8);
+  assert.equal(seats.length, 6);
+  seats.forEach((s) => {
+    assert.ok(Math.abs(s.x + s.size / 2 - s.ring.cx) < 1, 'centred in the ring');
+    assert.ok(s.y + s.size * 0.38 < s.ring.cy, 'face above the water');
+  });
+  assert.equal(Scenes.frameWidth('tiki', 3), 1080);
+});
