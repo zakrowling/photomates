@@ -441,7 +441,7 @@ requestAnimationFrame(frame);
 
 // ---------- Lobby ----------
 
-// 6 slots, Mate 1 to Mate 6 (by their number in the room), each showing that mate's live cut-out.
+// 6 slots (one per mate, by their number in the room), each showing that mate's live cut-out.
 const LOBBY_SLOTS = 6;
 const SLOT_PX = 192;
 function buildSlots() {
@@ -451,12 +451,11 @@ function buildSlots() {
     const c = document.createElement('canvas');
     c.width = SLOT_PX;
     c.height = SLOT_PX;
-    const label = document.createElement('div');
-    label.className = 'slot-label';
-    label.textContent = `Mate ${i + 1}`;
     const tag = document.createElement('div');
     tag.className = 'slot-tag';
-    slot.append(c, label, tag);
+    tag.textContent = 'You';
+    tag.hidden = true;
+    slot.append(c, tag);
     return slot;
   }));
 }
@@ -468,7 +467,7 @@ function renderSlots() {
     slot.classList.toggle('filled', !!p);
     slot.classList.toggle('you', you);
     slot.style.setProperty('--mate', p ? p.color : 'transparent');
-    slot.querySelector('.slot-tag').textContent = you ? 'You' : p ? '' : 'Waiting...';
+    slot.querySelector('.slot-tag').hidden = !you;
   });
   const more = state.players.filter((p) => p.number > LOBBY_SLOTS).length;
   $('more-mates').hidden = !more;
@@ -732,8 +731,9 @@ socket.on('rejoined', (res) => {
 
 
 // Apps that embed the game pass their own session id as ?group=<id> (any length or characters), so each
-// group gets a private link room instead of everyone sharing /mate. The id is hashed into a valid room
-// name ('G' + base 36), so ids of any shape work and never clash with typed 4-letter codes.
+// group gets its own link room instead of everyone sharing /mate. The id is hashed into a 4-letter code
+// like any other room (same letters, no I or O), so it can also be typed in to join.
+const GROUP_LETTERS = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
 function groupRoom(id) {
   if (!id) return null;
   let h1 = 0xdeadbeef;
@@ -745,8 +745,13 @@ function groupRoom(id) {
   }
   h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507) ^ Math.imul(h2 ^ (h2 >>> 13), 3266489909);
   h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507) ^ Math.imul(h1 ^ (h1 >>> 13), 3266489909);
-  const hash = 4294967296 * (2097151 & h2) + (h1 >>> 0);
-  return `g${hash.toString(36)}`;
+  let hash = 4294967296 * (2097151 & h2) + (h1 >>> 0);
+  let code = '';
+  for (let i = 0; i < 4; i++) {
+    code += GROUP_LETTERS[hash % GROUP_LETTERS.length];
+    hash = Math.floor(hash / GROUP_LETTERS.length);
+  }
+  return code;
 }
 // Links like /photomates/mate (or ?room=mate) open that booth: join it if someone's there, otherwise host it.
 function enterRoomFromUrl() {

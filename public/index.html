@@ -85,14 +85,17 @@
     #lobby-card.in-room { max-width: 920px; }
     .slots { display: grid; grid-template-columns: repeat(6, 1fr); gap: 12px; margin: 0 0 14px; }
     .slot {
-      display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 8px 8px 10px;
+      position: relative; padding: 6px;
       background: #0c1612; border: 2px dashed var(--line); border-radius: 16px; color: var(--muted);
     }
     .slot.filled { border-style: solid; border-color: var(--mate); color: var(--text); }
     .slot.you { box-shadow: 0 0 18px -2px var(--mate); }
     .slot canvas { display: block; width: 100%; aspect-ratio: 1; border-radius: 11px; }
-    .slot-label { font-family: var(--display); font-weight: 600; font-size: 16px; }
-    .slot-tag { font-size: 13px; color: var(--muted); min-height: 1.2em; }
+    .slot-tag {
+      position: absolute; bottom: 14px; left: 50%; transform: translateX(-50%); padding: 3px 12px; border-radius: 999px;
+      background: var(--mate); color: #10201a; font-family: var(--display); font-weight: 700; font-size: 14px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
+    }
     .more-mates { margin: -4px 0 12px; color: var(--muted); }
     #lobby-card #open-btn { max-width: 340px; margin: 6px auto 14px; }
     .lobby-invite { display: inline-flex; align-items: center; gap: 8px; border: 1px solid var(--line); border-radius: 12px; padding: 4px 4px 4px 12px; }
@@ -200,7 +203,7 @@
 <body>
   <header>
     <h1><img src="assets/photomates-logo.svg" alt="Photomates" class="logo"></h1>
-    <p class="subtitle">A together-mode photobooth for up to 6 workmates.</p>
+    <p class="subtitle">A together-mode photobooth for up to 6+ workmates.</p>
   </header>
 
   <div id="lobby-card" class="card">
