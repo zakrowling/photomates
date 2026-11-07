@@ -104,8 +104,20 @@
     #camera-msg p { max-width: 520px; font-size: 20px; margin: 0 0 12px; }
     #camera-msg .btn { width: auto; display: inline-block; }
 
-    .controls { display: flex; align-items: center; gap: 12px; margin-top: 14px; flex-wrap: wrap; }
-    .controls .right { display: flex; align-items: center; gap: 12px; margin-left: auto; flex-wrap: wrap; justify-content: flex-end; }
+    .controls {
+      position: fixed; left: 0; right: 0; bottom: 0; z-index: 50; display: flex; align-items: center; gap: 10px; flex-wrap: nowrap;
+      padding: 12px max(16px, calc((100vw - 1280px) / 2)); background: rgba(15, 26, 22, 0.92);
+      backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); border-top: 1px solid var(--line);
+    }
+    body.in-booth { padding-bottom: 110px; }
+    .controls .right { display: flex; align-items: center; gap: 10px; margin-left: auto; flex-wrap: nowrap; justify-content: flex-end; }
+    .controls .scene-picker label { display: none; }
+    #scene-select { min-width: 200px; font-size: 19px; padding: 10px 46px 10px 16px; }
+    .controls #shutter { white-space: nowrap; }
+    @media (max-width: 1000px) {
+      .controls .invite code { display: none; }
+      #scene-select { min-width: 160px; }
+    }
     .scene-picker { position: relative; display: flex; align-items: center; gap: 12px; }
     .scene-picker label { color: var(--muted); font-size: 17px; font-weight: 500; }
     .scene-picker .select-wrap { position: relative; }
@@ -134,17 +146,27 @@
     #shutter:disabled { opacity: 0.6; cursor: default; }
     #shutter .lens { width: 34px; height: 34px; border-radius: 50%; background: #fff; border: 6px solid var(--accent-ink); }
 
-    #result { position: fixed; inset: 0; background: rgba(8, 6, 12, 0.82); display: flex; align-items: center; justify-content: center; padding: 24px; z-index: 10; }
+    #result { position: fixed; inset: 0; background: rgba(6, 12, 9, 0.82); display: flex; align-items: center; justify-content: center; padding: 24px; z-index: 70; }
     .result-card { background: var(--panel); border: 1px solid var(--line); border-radius: 20px; padding: 18px; max-width: 1100px; width: 100%; text-align: center; }
     .result-card h2 { margin: 0 0 12px; font-size: 28px; }
     #result-img { width: 100%; border-radius: 12px; display: block; background: #000; }
     .result-actions { display: flex; gap: 10px; justify-content: center; margin-top: 14px; flex-wrap: wrap; }
     .result-actions .btn { width: auto; margin: 0; padding: 12px 26px; }
     #result-wait { color: var(--muted); margin: 40px 0; font-size: 20px; }
-    #gallery { margin-top: 18px; }
+    #gallery { position: fixed; inset: 0; background: rgba(6, 12, 9, 0.82); display: flex; align-items: center; justify-content: center; padding: 24px; z-index: 60; }
+    #gallery .result-card { max-height: 92vh; overflow: auto; }
+    #gallery .gallery-grid { min-height: 140px; }
+    .gallery-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; }
+    .gallery-grid .thumb { width: 100%; }
+    .photos-btn {
+      display: flex; align-items: center; gap: 8px; padding: 12px 18px; border-radius: 999px; border: 2px solid var(--green);
+      background: transparent; color: var(--text); font-family: var(--display); font-size: 18px; font-weight: 700;
+    }
+    .photos-btn:hover { background: rgba(55, 160, 130, 0.18); }
+    .photos-btn span { background: var(--green); color: #fff; border-radius: 999px; min-width: 26px; padding: 1px 8px; font-size: 15px; }
     .gallery-title { color: var(--muted); margin: 0 0 8px; font-size: 16px; }
     .gallery-strip { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 6px; }
-    .thumb { flex: none; padding: 0; border: 2px solid var(--line); border-radius: 10px; overflow: hidden; background: #000; width: 176px; aspect-ratio: 16 / 9; }
+    .thumb { flex: none; cursor: pointer; padding: 0; border: 2px solid var(--line); border-radius: 10px; overflow: hidden; background: #000; width: 176px; aspect-ratio: 16 / 9; }
     .thumb:hover, .thumb:focus-visible { border-color: var(--accent); outline: none; }
     .thumb img { width: 100%; height: 100%; object-fit: contain; display: block; }
     #videos { position: fixed; left: -10000px; top: 0; width: 1px; height: 1px; overflow: hidden; }
@@ -191,13 +213,23 @@
         <code id="room-code-txt">----</code>
         <button class="small-btn" id="copy-btn">Copy invite</button>
       </div>
+      <button class="photos-btn" id="photos-btn" hidden>Your photos <span id="photos-count">0</span></button>
       <button id="shutter"><span class="lens" aria-hidden="true"></span>Take photo</button>
       </div>
     </div>
 
-    <div id="gallery" hidden>
-      <p class="gallery-title">Photos from this booth. Click one to download it.</p>
-      <div class="gallery-strip" id="gallery-strip"></div>
+
+  </div>
+
+  <div id="gallery" class="modal" hidden>
+    <div class="result-card">
+      <h2>Your photos</h2>
+      <p class="gallery-title" id="gallery-title">Every photo from this session. Click one to see it bigger.</p>
+      <div class="gallery-grid" id="gallery-strip"></div>
+      <div class="result-actions">
+        <button class="btn" id="download-all">Download all</button>
+        <button class="btn secondary" id="close-gallery">Back to the booth</button>
+      </div>
     </div>
   </div>
 

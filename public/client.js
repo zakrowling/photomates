@@ -734,6 +734,8 @@ function loadImage(src) {
   });
 }
 
+const logoImage = loadImage('assets/photomates-logo.svg').catch(() => null);
+
 // The finished photo, at twice the stage size, from everyone's full-quality photos.
 async function compose(shot) {
   const scale = 2;
@@ -751,12 +753,17 @@ async function compose(shot) {
   });
   Scenes.render(c, shot.scene, people);
   state.lastShot = { n: shot.n, people: shot.players.length, stills: shot.stills.size };
-  c.font = "700 18px 'Bricolage Grotesque', Jost, system-ui, sans-serif";
-  c.textAlign = 'right';
-  c.fillStyle = 'rgba(255,255,255,0.7)';
-  c.shadowColor = 'rgba(0,0,0,0.5)';
-  c.shadowBlur = 4;
-  c.fillText('photomates', (Scenes.W + fw) / 2 - 16, Scenes.H - 14);
+  // The Photomates logo in the bottom right corner.
+  const logo = await logoImage;
+  if (logo) {
+    const lw = 150;
+    const lh = lw * (logo.naturalHeight / logo.naturalWidth);
+    c.save();
+    c.shadowColor = 'rgba(0,0,0,0.55)';
+    c.shadowBlur = 6;
+    c.drawImage(logo, (Scenes.W + fw) / 2 - 16 - lw, Scenes.H - 14 - lh, lw, lh);
+    c.restore();
+  }
   const blob = await new Promise((resolve) => out.toBlob(resolve, 'image/png'));
   if (state.pending !== shot) return;
   state.pending = null;
@@ -777,7 +784,9 @@ function addToGallery(url) {
 
 function renderGallery() {
   const photos = state.photos || [];
-  $('gallery').hidden = !photos.length;
+  $('photos-btn').hidden = !photos.length;
+  $('photos-count').textContent = photos.length;
+  $('download-all').textContent = inFrame ? 'Open all in new tabs' : `Download all (${photos.length})`;
   $('gallery-strip').replaceChildren(...photos.map((url, i) => {
     const b = document.createElement('button');
     b.className = 'thumb';
@@ -786,10 +795,37 @@ function renderGallery() {
     img.src = url;
     img.alt = '';
     b.append(img);
-    b.addEventListener('click', () => showResult(url));
+    b.addEventListener('click', () => {
+      $('gallery').hidden = true;
+      showResult(url);
+    });
     return b;
   }));
 }
+
+$('photos-btn').addEventListener('click', () => {
+  renderGallery();
+  $('gallery').hidden = false;
+});
+$('close-gallery').addEventListener('click', () => { $('gallery').hidden = true; });
+$('gallery').addEventListener('click', (e) => { if (e.target === $('gallery')) $('gallery').hidden = true; });
+// Every photo from this session, oldest first. Downloads are spaced out so the browser allows them all.
+$('download-all').addEventListener('click', () => {
+  const photos = [...(state.photos || [])].reverse();
+  photos.forEach((url, i) => setTimeout(() => {
+    const a = document.createElement('a');
+    a.href = url;
+    if (inFrame) {
+      a.target = '_blank';
+      a.rel = 'noopener';
+    } else {
+      a.download = `photomates-${i + 1}.png`;
+    }
+    document.body.append(a);
+    a.click();
+    a.remove();
+  }, i * 350));
+});
 
 function showResult(url) {
   $('result').hidden = false;
