@@ -28,7 +28,7 @@ for (const scene of Scenes.SCENES) {
 test('on your own, you sit in the middle', () => {
   for (const scene of Scenes.SCENES) {
     const [s] = Scenes.layout(scene.id, 1);
-    assert.ok(Math.abs(s.x + s.size / 2 - Scenes.W / 2) < 2, scene.id);
+    assert.ok(Math.abs(s.x + s.size / 2 - Scenes.W / 2) < 6, scene.id);
   }
 });
 

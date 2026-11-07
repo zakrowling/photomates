@@ -123,6 +123,12 @@
     .result-actions { display: flex; gap: 10px; justify-content: center; margin-top: 14px; flex-wrap: wrap; }
     .result-actions .btn { width: auto; margin: 0; padding: 12px 26px; }
     #result-wait { color: var(--muted); margin: 40px 0; font-size: 20px; }
+    #gallery { margin-top: 18px; }
+    .gallery-title { color: var(--muted); margin: 0 0 8px; font-size: 16px; }
+    .gallery-strip { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 6px; }
+    .thumb { flex: none; padding: 0; border: 2px solid var(--line); border-radius: 10px; overflow: hidden; background: #000; width: 176px; aspect-ratio: 16 / 9; }
+    .thumb:hover, .thumb:focus-visible { border-color: var(--accent); outline: none; }
+    .thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
     #videos { position: fixed; left: -10000px; top: 0; width: 1px; height: 1px; overflow: hidden; }
   </style>
 </head>
@@ -172,6 +178,11 @@
       <button class="chip" id="shuffle-btn">Shuffle seats</button>
       <span class="spacer"></span>
       <button id="shutter"><span class="lens" aria-hidden="true"></span>Take photo</button>
+    </div>
+
+    <div id="gallery" hidden>
+      <p class="gallery-title">Photos from this booth. Click one to download it.</p>
+      <div class="gallery-strip" id="gallery-strip"></div>
     </div>
   </div>
 

@@ -2,13 +2,13 @@
 
 A group photobooth for remote mates, in the style of Teams' Together Mode. Everyone joins a booth from their own computer, their camera background is removed, and the whole group sits together in one scene. Press the shutter, everyone gets a 3-2-1 countdown, and out comes a group photo to download. Try it at **https://zakrowling.github.io/photomates/** or jump straight into the shared booth at **https://zakrowling.github.io/photomates/mate**.
 
-- **Background removal in your own browser**: [MediaPipe](https://ai.google.dev/edge/mediapipe/solutions/vision/image_segmenter)'s selfie segmenter finds you in every camera frame, and a face detector keeps everyone framed the same way (head near the top, shoulders at the bottom, faces the same size), so the group looks right together.
+- **Background removal in your own browser**: [MediaPipe](https://ai.google.dev/edge/mediapipe/solutions/vision/image_segmenter)'s selfie segmenter finds you in every camera frame. Only pixels it's fairly sure are you are kept, and the edge is feathered so hair fades out softly rather than leaving a halo. A face detector keeps everyone framed the same way (head near the top, shoulders at the bottom, faces the same size), so the group looks right together.
 - **Scenes**:
-  - **Theatre**: tiered wooden benches, like a lecture hall.
+  - **Theatre**: a photo of a tiered wooden auditorium ([`public/assets/bg/auditorium.jpg`](public/assets/bg/auditorium.jpg)). Everyone sits in one of its chairs, behind its desks.
   - **Stadium**: rows of blue stadium seats.
   - **Brady Bunch**: everyone in their own square on a grid that grows with the group.
-  In the theatre and stadium, the bench or row of seats in front of you hides your lower half, so everyone looks like they're really sitting there. Anyone can switch scenes or shuffle the seats, and everyone sees the change.
-- **The photo**: anyone can press **Take photo**. Everyone sees the same countdown and flash. At the shutter, each browser takes a full-quality picture of its own person and sends it to everyone else, and every browser puts together the same high-resolution group photo (2560×1440 PNG) to download. The live preview can be low resolution, but the photo isn't.
+  In the theatre and stadium, the desk or row of seats in front of you hides your lower half, so everyone looks like they're really sitting there. To make it look like one photo, each person is colour matched to the scene, shaded where the desk's shadow falls across them, given a soft shadow behind, softened slightly in the back rows, and the whole picture gets a fine film grain. If you sit close to your camera (so your body ends early), you're grown a little and lowered just enough for the desk to hide where it ends. Anyone can switch scenes or shuffle the seats, and everyone sees the change.
+- **The photo**: anyone can press **Take photo**. Everyone sees the same countdown and flash. At the shutter, each browser takes a full-quality picture of its own person and sends it to everyone else, and every browser puts together the same high-resolution group photo (2560×1440 PNG), so everyone can download it. Every photo from the booth stays in a strip under the controls, so anyone can go back and download any of them.
 - **Up to 12 mates** per booth. Someone without a camera (or who has wandered off) shows as a silhouette in their colour.
 - **Rooms**: create a booth and share the 4-letter code or the invite link. Link booths like https://zakrowling.github.io/photomates/mate need no code: the first person to open the link hosts, everyone else joins, and hosting is handed on if the host leaves.
 - **Private**: there's no server. Cameras go directly between the browsers in your booth, and photos only exist on your own devices.
@@ -41,4 +41,4 @@ Every push to `main` runs the tests and publishes the `public/` folder to GitHub
 
 ## Scenes and art
 
-The scenes are drawn in code for now. Each scene in [`public/scenes.js`](public/scenes.js) lists its rows of seats (where each person goes and how big they are) and draws the background and whatever sits in front of each row, so a scene can be swapped for a real photo later.
+Each scene in [`public/scenes.js`](public/scenes.js) lists its rows of seats: where each desk edge is, where a seated face goes, how big people are in that row, and where the chairs are. A photo scene draws the photo, then after each row of people redraws the photo from that row's desk down, so the photo's own desks hide everyone's lower half. To add a photo scene, use a straight-on photo of rows of seats with horizontal desks or seat backs, and measure those positions on the 1280×720 stage. The stadium and Brady Bunch scenes are drawn in code.

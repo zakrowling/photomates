@@ -9,6 +9,7 @@
 })(typeof self !== 'undefined' ? self : this, () => {
   const W = 1280;
   const H = 720;
+  const FACE_AT = 0.38; // how far down each person's picture their face is (see updateCrop in client.js)
 
   // ---------- Small drawing helpers ----------
 
@@ -28,81 +29,75 @@
     return g;
   }
 
-  // Wood grain: a few faint horizontal streaks, the same every time (no randomness between frames).
-  function grain(c, x, y, w, h, alpha) {
+  // ---------- Photos as scenes ----------
+
+  // A photo scene draws the photo, then after each row of people redraws the photo from that row's desk
+  // down, so the desk covers their lower half (and the rows in front stay in front).
+  const photos = new Map();
+  function photo(src) {
+    if (typeof Image === 'undefined') return null;
+    if (!photos.has(src)) {
+      const img = new Image();
+      img.src = src;
+      photos.set(src, img);
+    }
+    const img = photos.get(src);
+    return img.complete && img.naturalWidth ? img : null;
+  }
+
+  // Draws the photo to cover the stage (cropping the sides if it's a little wider than 16:9), optionally
+  // only from y down.
+  function drawPhoto(c, src, fromY = 0) {
+    const img = photo(src);
+    if (!img) {
+      if (!fromY) {
+        c.fillStyle = '#2a2420';
+        c.fillRect(0, 0, W, H);
+      }
+      return;
+    }
+    const k = Math.max(W / img.naturalWidth, H / img.naturalHeight);
+    const dw = img.naturalWidth * k;
+    const dh = img.naturalHeight * k;
+    const dx = (W - dw) / 2;
+    const dy = (H - dh) / 2;
     c.save();
     c.beginPath();
-    c.rect(x, y, w, h);
+    c.rect(0, fromY, W, H - fromY);
     c.clip();
-    c.strokeStyle = `rgba(90,45,10,${alpha})`;
-    c.lineWidth = 1.5;
-    for (let i = 0; i < h; i += 7) {
-      const wobble = Math.sin((y + i) * 0.37) * 3;
-      c.beginPath();
-      c.moveTo(x, y + i + wobble);
-      c.bezierCurveTo(x + w * 0.3, y + i - wobble, x + w * 0.7, y + i + wobble * 1.5, x + w, y + i - wobble);
-      c.stroke();
-    }
+    c.drawImage(img, dx, dy, dw, dh);
     c.restore();
   }
 
-  // ---------- Theatre: a tiered wooden lecture hall (like Teams' Together Mode) ----------
+  // ---------- Theatre: a tiered auditorium (photo: assets/bg/auditorium.jpg) ----------
 
+  // Measured from the photo, on the 1280×720 stage: each row's desk top (bench), where a seated face
+  // goes (just above the chair back), how big people are in that row, and the chairs' centres.
+  const THEATRE_PHOTO = 'assets/bg/auditorium.jpg';
   const THEATRE_ROWS = [
-    { bench: 300, size: 205, xs: [272, 517, 763, 1008] },
-    { bench: 468, size: 245, xs: [100, 370, 640, 910, 1180] },
-    { bench: 640, size: 290, xs: [175, 485, 795, 1105] },
+    { bench: 298, faceY: 232, size: 140, xs: [168, 406, 643, 880, 1117] },
+    { bench: 368, faceY: 291, size: 164, xs: [252, 512, 773, 1035] },
+    { bench: 468, faceY: 378, size: 191, xs: [87, 363, 643, 923, 1199] },
+    { bench: 645, faceY: 521, size: 263, xs: [160, 483, 804, 1128] },
   ];
-
-  function theatreSeatBack(c, x, bench, size) {
-    const w = size * 0.62;
-    const h = size * 0.42;
-    rr(c, x - w / 2, bench - h - size * 0.05, w, h + 10, w * 0.18);
-    c.fillStyle = grad(c, bench - h, bench, [[0, '#ead2cf'], [1, '#c9a9a5']]);
-    c.fill();
-  }
-
-  function theatreBench(c, bench, size) {
-    const h = size * 0.24;
-    c.fillStyle = grad(c, bench, bench + h, [[0, '#f2c58f'], [0.12, '#dc9f5f'], [1, '#b8773a']]);
-    c.fillRect(0, bench, W, h);
-    grain(c, 0, bench + 6, W, h - 6, 0.12);
-    c.fillStyle = 'rgba(255,240,215,0.7)';
-    c.fillRect(0, bench, W, 3);
-    c.fillStyle = 'rgba(60,25,0,0.25)';
-    c.fillRect(0, bench + h - 4, W, 4);
-  }
 
   const theatre = {
     id: 'theatre',
     name: 'Theatre',
     kind: 'rows',
     rows: THEATRE_ROWS,
-    // Front row centre first, then fanning out and back.
-    priority: [[2, 1], [2, 2], [1, 2], [2, 0], [2, 3], [1, 1], [1, 3], [0, 1], [0, 2], [1, 0], [1, 4], [0, 0], [0, 3]],
+    // Front row first, then fanning out and back.
+    priority: [[3, 1], [3, 2], [2, 2], [3, 0], [3, 3], [2, 1], [2, 3], [1, 1], [1, 2], [2, 0], [2, 4], [1, 0], [1, 3], [0, 2]],
+    solo: [2, 2],
     background(c) {
-      c.fillStyle = grad(c, 0, H, [[0, '#c98a4b'], [1, '#a8662e']]);
-      c.fillRect(0, 0, W, H);
-      // Wall panels behind the top row.
-      for (let x = 0; x < W; x += 160) {
-        c.fillStyle = x % 320 ? '#c48546' : '#bd7d3f';
-        c.fillRect(x, 0, 158, 140);
-        grain(c, x, 0, 158, 140, 0.1);
-      }
-      // An empty row at the very back.
-      for (let x = 150; x < W; x += 245) theatreSeatBack(c, x, 150, 170);
-      theatreBench(c, 150, 170);
+      drawPhoto(c, THEATRE_PHOTO);
     },
-    seatBacks(c, r) {
-      const row = THEATRE_ROWS[r];
-      const step = row.xs[1] - row.xs[0];
-      for (let x = row.xs[0] - step * 2; x < W + step; x += step) theatreSeatBack(c, x, row.bench, row.size);
-    },
+    seatBacks() {},
     front(c, r) {
-      const row = THEATRE_ROWS[r];
-      theatreBench(c, row.bench, row.size);
+      drawPhoto(c, THEATRE_PHOTO, THEATRE_ROWS[r].bench);
     },
-    tone: 'saturate(1.05) sepia(0.06)',
+    // The photo is warm and evenly lit: warm webcams up a touch and soften their contrast to match.
+    tone: 'saturate(0.92) sepia(0.12) contrast(0.97) brightness(0.97)',
   };
 
   // ---------- Stadium: rows of blue plastic seats ----------
@@ -161,6 +156,7 @@
     kind: 'rows',
     rows: STADIUM_ROWS,
     priority: [[2, 1], [2, 2], [1, 2], [2, 0], [2, 3], [1, 1], [1, 3], [0, 1], [0, 2], [1, 0], [1, 4], [0, 0], [0, 3]],
+    solo: [1, 2],
     background(c) {
       c.fillStyle = '#3e4757';
       c.fillRect(0, 0, W, H);
@@ -215,21 +211,22 @@
       });
     }
     // On your own, you get the middle seat.
-    const order = n === 1 ? [[1, 2]] : scene.priority;
+    const order = n === 1 ? [scene.solo || [1, 2]] : scene.priority;
     return order.slice(0, n).map(([r, i]) => {
       const row = scene.rows[r];
       const size = row.size;
-      // The bottom of the picture tucks well behind the bench in front.
-      return { x: row.xs[i] - size / 2, y: row.bench + size * 0.28 - size, size, row: r, labelY: row.bench + 22, cx: row.xs[i] };
+      // Photo rows say where the face goes; drawn rows tuck the bottom of the picture behind the bench.
+      const y = row.faceY !== undefined ? row.faceY - FACE_AT * size : row.bench + size * 0.28 - size;
+      return { x: row.xs[i] - size / 2, y, size, row: r, bench: row.bench, cx: row.xs[i] };
     });
   }
 
   /**
    * Draw a scene with everyone in it.
-   * people: [{ seat, image (canvas/img or null), name, color }]; image null draws a placeholder.
-   * opts.labels: draw name tags (live view only, not the photo).
+   * people: [{ seat, image (canvas/img or null), color, bottom }]. image null draws a placeholder;
+   * bottom is how far down (0-1) their picture their body reaches.
    */
-  function render(c, sceneId, people, opts = {}) {
+  function render(c, sceneId, people) {
     const scene = byId(sceneId);
     const seats = layout(sceneId, people.length);
     const at = new Map(people.map((p) => [p.seat, p]));
@@ -245,31 +242,80 @@
         c.beginPath();
         c.rect(cell.x, cell.y, cell.w, cell.h);
         c.clip();
-        drawPerson(c, at.get(i), s, scene.tone);
+        drawPerson(c, at.get(i), s, scene);
         c.restore();
-        if (opts.labels && at.get(i)) tag(c, at.get(i), cell.x + 14, cell.y + cell.h - 14, 'left');
       });
     } else {
       scene.background(c);
       scene.rows.forEach((row, r) => {
         scene.seatBacks(c, r);
-        seats.forEach((s, i) => { if (s.row === r) drawPerson(c, at.get(i), s, scene.tone, true); });
+        seats.forEach((s, i) => { if (s.row === r) drawPerson(c, at.get(i), s, scene); });
         scene.front(c, r);
       });
-      if (opts.labels) seats.forEach((s, i) => { if (at.get(i)) tag(c, at.get(i), s.cx, s.labelY, 'center'); });
     }
+    grain(c);
     c.restore();
   }
 
-  function drawPerson(c, person, s, tone, shadow) {
+  // Each person is drawn through a scratch canvas so they can be colour matched and shaded to sit in the
+  // scene: lowered if their body ends early (so it still disappears behind the desk), darkened just
+  // above the desk where its shadow falls, softened a little in the back rows, with a soft shadow behind.
+  let scratch = null;
+  function drawPerson(c, person, s, scene) {
     if (!person) return;
-    c.save();
-    if (person.image) {
-      c.filter = shadow ? `${tone} drop-shadow(0 6px 10px rgba(0,0,0,0.35))` : tone;
-      c.drawImage(person.image, s.x, s.y, s.size, s.size);
-    } else {
+    if (!person.image) {
+      c.save();
       placeholder(c, s, person.color);
+      c.restore();
+      return;
     }
+    const rows = scene.kind === 'rows';
+    let size = s.size;
+    let y = s.y;
+    if (rows) {
+      // If their body ends above the desk (they sit close to their camera), first grow them a little
+      // around their face, then lower them only as much as still needed so the desk hides the end.
+      const bottom = person.bottom ?? 1;
+      const faceY = s.y + FACE_AT * s.size;
+      const below = Math.max(0.05, bottom - FACE_AT);
+      let need = s.bench + 4 - (s.y + bottom * s.size);
+      if (need > 0) {
+        size = s.size * Math.min(1.12, 1 + need / (below * s.size));
+        y = faceY - FACE_AT * size;
+        need = s.bench + 4 - (y + bottom * size);
+        if (need > 0) y += Math.min(need, 0.3 * s.size);
+      }
+    }
+    const x = s.x + (s.size - size) / 2;
+    const res = Math.abs(c.getTransform().a) || 1; // draw at full detail when the stage is scaled up
+    const px = Math.max(1, Math.round(size * res));
+    scratch = scratch || (typeof document !== 'undefined' ? document.createElement('canvas') : null);
+    if (!scratch) return;
+    if (scratch.width !== px) {
+      scratch.width = px;
+      scratch.height = px;
+    }
+    const t = scratch.getContext('2d');
+    t.save();
+    t.clearRect(0, 0, px, px);
+    const depth = rows ? (scene.rows.length - 1 - s.row) * 0.35 : 0;
+    t.filter = `${scene.tone}${depth ? ` blur(${(depth * res).toFixed(2)}px)` : ''}`;
+    t.drawImage(person.image, 0, 0, px, px);
+    t.filter = 'none';
+    if (rows) {
+      // The desk's shadow across their lower body.
+      const benchY = (s.bench - y) * res;
+      const g = t.createLinearGradient(0, benchY - size * 0.22 * res, 0, benchY);
+      g.addColorStop(0, 'rgba(25,12,0,0)');
+      g.addColorStop(1, 'rgba(25,12,0,0.5)');
+      t.globalCompositeOperation = 'source-atop';
+      t.fillStyle = g;
+      t.fillRect(0, 0, px, px);
+    }
+    t.restore();
+    c.save();
+    if (rows) c.filter = 'drop-shadow(0 3px 7px rgba(0,0,0,0.45))';
+    c.drawImage(scratch, x, y, size, size);
     c.restore();
   }
 
@@ -279,29 +325,37 @@
     c.globalAlpha = 0.85;
     c.fillStyle = colour;
     c.beginPath();
-    c.ellipse(cx, s.y + s.size * 0.36, s.size * 0.16, s.size * 0.19, 0, 0, Math.PI * 2);
+    c.ellipse(cx, s.y + s.size * 0.38, s.size * 0.15, s.size * 0.18, 0, 0, Math.PI * 2);
     c.fill();
     c.beginPath();
     c.ellipse(cx, s.y + s.size * 0.95, s.size * 0.36, s.size * 0.33, 0, Math.PI, 0);
     c.fill();
   }
 
-  function tag(c, person, x, y, align) {
+  // A fine film grain over the whole picture, so webcams and scene look like one photo.
+  let noise = null;
+  function grain(c) {
+    if (typeof document === 'undefined') return;
+    if (!noise) {
+      noise = document.createElement('canvas');
+      noise.width = 256;
+      noise.height = 256;
+      const n = noise.getContext('2d');
+      const img = n.createImageData(256, 256);
+      for (let i = 0; i < img.data.length; i += 4) {
+        const v = 128 + (Math.random() - 0.5) * 90;
+        img.data[i] = v;
+        img.data[i + 1] = v;
+        img.data[i + 2] = v;
+        img.data[i + 3] = 255;
+      }
+      n.putImageData(img, 0, 0);
+    }
     c.save();
-    c.font = '600 16px Fredoka, system-ui, sans-serif';
-    const w = c.measureText(person.name).width + 18;
-    const left = align === 'center' ? x - w / 2 : x;
-    c.fillStyle = 'rgba(15,15,20,0.72)';
-    rr(c, left, y - 13, w, 24, 12);
-    c.fill();
-    c.fillStyle = person.color;
-    c.beginPath();
-    c.arc(left + 10, y - 1, 4, 0, Math.PI * 2);
-    c.fill();
-    c.fillStyle = '#fff';
-    c.textBaseline = 'middle';
-    c.textAlign = 'left';
-    c.fillText(person.name, left + 17 - 3, y);
+    c.globalAlpha = 0.07;
+    c.globalCompositeOperation = 'overlay';
+    c.fillStyle = c.createPattern(noise, 'repeat');
+    c.fillRect(0, 0, W, H);
     c.restore();
   }
 

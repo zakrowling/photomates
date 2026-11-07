@@ -42,6 +42,7 @@ const cam = {
   faces: null,
   small: Object.assign(document.createElement('canvas'), { width: PROC_W, height: PROC_H }),
   mask: Object.assign(document.createElement('canvas'), { width: PROC_W, height: PROC_H }),
+  soft: Object.assign(document.createElement('canvas'), { width: PROC_W, height: PROC_H }), // feathered mask
   maskData: null,
   packed: Object.assign(document.createElement('canvas'), { width: SEND * 2, height: SEND }),
   crop: { x: PROC_W / 2 - PROC_H / 2, y: 0, s: PROC_H }, // the square around you, smoothed
@@ -55,6 +56,14 @@ cam.video.muted = true;
 cam.video.playsInline = true;
 const smallCtx = cam.small.getContext('2d', { willReadFrequently: false });
 const maskCtx = cam.mask.getContext('2d');
+const softCtx = cam.soft.getContext('2d');
+// How strongly to remove the background: only pixels the model is fairly sure are you are kept, then
+// the edge is feathered (blurred and pulled in a little) so hair fades out softly instead of a halo.
+const KEEP_FROM = 0.5;
+const KEEP_FULL = 0.8;
+const FEATHER_PX = 2.2;
+// Turns a feathered mask value (0-255) into transparency, trimming the faint outer edge.
+const edge = (m) => Math.max(0, Math.min(255, (m - 60) * 1.35));
 const packedCtx = cam.packed.getContext('2d');
 packedCtx.fillStyle = '#000';
 packedCtx.fillRect(0, 0, SEND * 2, SEND);
@@ -130,7 +139,7 @@ function processCamera(now) {
     }
     const d = cam.maskData.data;
     for (let i = 0, j = 0; i < conf.length; i++, j += 4) {
-      const v = conf[i] * 255;
+      const v = Math.max(0, Math.min(1, (conf[i] - KEEP_FROM) / (KEEP_FULL - KEEP_FROM))) * 255;
       d[j] = v;
       d[j + 1] = v;
       d[j + 2] = v;
@@ -147,6 +156,15 @@ function processCamera(now) {
     maskCtx.fillStyle = g;
     maskCtx.fillRect(0, h * 0.8, cam.mask.width, h * 0.2);
     maskCtx.globalCompositeOperation = 'source-over';
+    if (cam.soft.width !== cam.mask.width || cam.soft.height !== h) {
+      cam.soft.width = cam.mask.width;
+      cam.soft.height = h;
+    }
+    softCtx.fillStyle = '#000';
+    softCtx.fillRect(0, 0, cam.soft.width, h);
+    softCtx.filter = `blur(${FEATHER_PX}px)`;
+    softCtx.drawImage(cam.mask, 0, 0);
+    softCtx.filter = 'none';
   });
   if (cam.frame++ % 3 === 0) {
     const det = cam.faces.detectForVideo(cam.small, ts);
@@ -160,7 +178,7 @@ function processCamera(now) {
   packedCtx.fillRect(0, 0, SEND * 2, SEND);
   packedCtx.drawImage(cam.small, x, y, s, s, 0, 0, SEND, SEND);
   const k = cam.mask.width / PROC_W;
-  packedCtx.drawImage(cam.mask, x * k, y * k, s * k, s * k, SEND, 0, SEND, SEND);
+  packedCtx.drawImage(cam.soft, x * k, y * k, s * k, s * k, SEND, 0, SEND, SEND);
 }
 
 // Frame everyone the same way: head near the top, shoulders at the bottom, faces the same size.
@@ -190,24 +208,45 @@ function unpack(src, out) {
   const img = octx.createImageData(SEND, SEND);
   const o = img.data;
   let cover = 0;
+  let bottom = 0;
   const fadeFrom = SEND * 0.9;
   for (let y = 0; y < SEND; y++) {
+    let row = 0;
     // The bottom few rows fade out, so a cut-off body never ends in a hard edge.
     const fade = y < fadeFrom ? 1 : 1 - (y - fadeFrom) / (SEND - fadeFrom);
     for (let x = 0; x < SEND; x++) {
       const i = (y * SEND * 2 + x) * 4;
       const p = (y * SEND + x) * 4;
       // Video compression blurs the mask a little: firm up its edges and drop faint noise.
-      const a = Math.max(0, Math.min(255, (d[i + SEND * 4] - 40) * 1.4)) * fade;
+      const a = edge(d[i + SEND * 4]) * fade;
       o[p] = d[i];
       o[p + 1] = d[i + 1];
       o[p + 2] = d[i + 2];
       o[p + 3] = a;
-      cover += a;
+      row += a;
     }
+    cover += row;
+    // Where their body ends: the lowest row that's still at least a fifth them.
+    if (row > SEND * 255 * 0.2) bottom = (y + 1) / SEND;
   }
   octx.putImageData(img, 0, 0);
-  return cover / (SEND * SEND * 255);
+  return { cover: cover / (SEND * SEND * 255), bottom };
+}
+
+// Where a photo's body ends (0-1 down the picture), like unpack works out for live video.
+function measureBottom(img) {
+  const n = 64;
+  const m = Object.assign(document.createElement('canvas'), { width: n, height: n });
+  const mctx = m.getContext('2d', { willReadFrequently: true });
+  mctx.drawImage(img, 0, 0, n, n);
+  const d = mctx.getImageData(0, 0, n, n).data;
+  let bottom = 0;
+  for (let y = 0; y < n; y++) {
+    let row = 0;
+    for (let x = 0; x < n; x++) row += d[(y * n + x) * 4 + 3];
+    if (row > n * 255 * 0.2) bottom = (y + 1) / n;
+  }
+  return bottom;
 }
 
 // A full-quality photo of you (transparent background) for the finished picture.
@@ -225,15 +264,14 @@ async function captureStill() {
   mctx.fillStyle = '#000';
   mctx.fillRect(0, 0, size, size);
   const k = cam.mask.width / PROC_W;
-  mctx.filter = 'blur(1px)';
-  mctx.drawImage(cam.mask, x * k, y * k, s * k, s * k, 0, 0, size, size);
+  mctx.drawImage(cam.soft, x * k, y * k, s * k, s * k, 0, 0, size, size);
   const px = octx.getImageData(0, 0, size, size);
   const mk = mctx.getImageData(0, 0, size, size).data;
   const fadeFrom = size * 0.9;
   for (let i = 0; i < mk.length; i += 4) {
     const row = Math.floor(i / 4 / size);
     const fade = row < fadeFrom ? 1 : 1 - (row - fadeFrom) / (size - fadeFrom);
-    px.data[i + 3] = Math.max(0, Math.min(255, (mk[i] - 25) * 1.25)) * fade;
+    px.data[i + 3] = edge(mk[i]) * fade;
   }
   octx.putImageData(px, 0, 0);
   // Small enough to send in one message: WebP keeps the transparency (PNG on browsers without WebP).
@@ -317,7 +355,7 @@ setInterval(syncCalls, 5000);
 
 const cutouts = new Map(); // player id -> { canvas, cover, seenAt }
 function cutoutFor(id) {
-  if (!cutouts.has(id)) cutouts.set(id, { canvas: Object.assign(document.createElement('canvas'), { width: SEND, height: SEND }), cover: 0, seenAt: 0 });
+  if (!cutouts.has(id)) cutouts.set(id, { canvas: Object.assign(document.createElement('canvas'), { width: SEND, height: SEND }), cover: 0, bottom: 1, seenAt: 0 });
   return cutouts.get(id);
 }
 
@@ -331,8 +369,11 @@ function updateCutouts(now) {
     }
     const c = cutoutFor(p.id);
     if (!src) return;
-    c.cover = unpack(src, c.canvas);
-    if (c.cover > 0.01) c.seenAt = now;
+    const { cover, bottom } = unpack(src, c.canvas);
+    c.cover = cover;
+    // Smoothed, so people don't bob up and down as they move.
+    c.bottom += (bottom - c.bottom) * 0.15;
+    if (cover > 0.01) c.seenAt = now;
   });
 }
 
@@ -341,7 +382,7 @@ function livePeople(now) {
   return state.players.map((p) => {
     const c = cutouts.get(p.id);
     const visible = c && now - c.seenAt < 2000;
-    return { seat: p.seat, name: p.name, color: p.color, image: visible ? c.canvas : null };
+    return { seat: p.seat, color: p.color, image: visible ? c.canvas : null, bottom: c ? c.bottom : 1 };
   });
 }
 
@@ -360,7 +401,7 @@ function frame(now) {
   requestAnimationFrame(frame);
   if (!state.inBooth) return;
   sctx.setTransform(1, 0, 0, 1, 0, 0);
-  Scenes.render(sctx, state.scene, livePeople(now), { labels: true });
+  Scenes.render(sctx, state.scene, livePeople(now));
 }
 requestAnimationFrame(frame);
 
@@ -439,8 +480,7 @@ function applyLobby(payload) {
   $('share-link').value = shareLink(payload.roomCode);
   document.querySelectorAll('#scene-picker .chip').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.scene === state.scene)));
   const n = state.players.length;
-  const me = state.players.find((p) => p.id === socket.id);
-  $('people').textContent = `${n} in the booth${me ? `, you're ${me.name}` : ''}`;
+  $('people').textContent = `${n} in the booth`;
   $('shuffle-btn').disabled = n < 2;
   history.replaceState(null, '', `${basePath()}?room=${encodeURIComponent(payload.roomCode.toLowerCase())}${DEBUG ? '&debug' : ''}`);
   syncCalls();
@@ -549,7 +589,7 @@ function enterRoomFromUrl() {
 
 // ---------- Taking the photo ----------
 
-socket.on('shutter', ({ n, ms, by }) => {
+socket.on('shutter', ({ n, ms }) => {
   if (!state.inBooth) return;
   // Everyone in the picture, as they're sitting right now.
   state.pending = {
@@ -569,7 +609,7 @@ socket.on('shutter', ({ n, ms, by }) => {
     if (left > 0) {
       if (el.dataset.n !== String(left)) {
         el.dataset.n = String(left);
-        el.innerHTML = `${left}<small>${left === 3 ? `${escapeHtml(by)} is taking a photo. Smile!` : 'Smile!'}</small>`;
+        el.innerHTML = `${left}<small>Smile!</small>`;
         beep(left === 1 ? 880 : 660, 0.12);
       }
       // A timer, not the screen refresh, so the photo still happens in a background tab.
@@ -582,10 +622,6 @@ socket.on('shutter', ({ n, ms, by }) => {
   };
   tick();
 });
-
-function escapeHtml(s) {
-  return String(s).replace(/[&<>"']/g, (ch) => `&#${ch.charCodeAt(0)};`);
-}
 
 async function fire(n) {
   const flash = $('flash');
@@ -665,10 +701,12 @@ async function compose(shot) {
   c.scale(scale, scale);
   const people = shot.players.map((p) => {
     const live = cutouts.get(p.id);
-    const image = shot.stills.get(p.id) || (live && performance.now() - live.seenAt < 4000 ? live.canvas : null);
-    return { seat: p.seat, name: p.name, color: p.color, image };
+    const still = shot.stills.get(p.id);
+    const image = still || (live && performance.now() - live.seenAt < 4000 ? live.canvas : null);
+    const bottom = still ? measureBottom(still) : (live ? live.bottom : 1);
+    return { seat: p.seat, color: p.color, image, bottom };
   });
-  Scenes.render(c, shot.scene, people, { labels: false });
+  Scenes.render(c, shot.scene, people);
   state.lastShot = { n: shot.n, people: shot.players.length, stills: shot.stills.size };
   c.font = '600 18px Fredoka, system-ui, sans-serif';
   c.textAlign = 'right';
@@ -680,18 +718,42 @@ async function compose(shot) {
   if (state.pending !== shot) return;
   state.pending = null;
   $('shutter').disabled = false;
-  showResult(URL.createObjectURL(blob));
+  const url = URL.createObjectURL(blob);
+  addToGallery(url);
+  showResult(url);
 }
 
-let lastResultUrl = null;
+// Every photo taken in this booth, so anyone can go back and download any of them.
+const MAX_GALLERY = 12;
+function addToGallery(url) {
+  state.photos = state.photos || [];
+  state.photos.unshift(url);
+  while (state.photos.length > MAX_GALLERY) URL.revokeObjectURL(state.photos.pop());
+  renderGallery();
+}
+
+function renderGallery() {
+  const photos = state.photos || [];
+  $('gallery').hidden = !photos.length;
+  $('gallery-strip').replaceChildren(...photos.map((url, i) => {
+    const b = document.createElement('button');
+    b.className = 'thumb';
+    b.setAttribute('aria-label', `Open photo ${photos.length - i}`);
+    const img = document.createElement('img');
+    img.src = url;
+    img.alt = '';
+    b.append(img);
+    b.addEventListener('click', () => showResult(url));
+    return b;
+  }));
+}
+
 function showResult(url) {
   $('result').hidden = false;
   $('result-wait').hidden = !!url;
   $('result-img').hidden = !url;
   $('download-btn').hidden = !url;
   if (!url) return;
-  if (lastResultUrl) URL.revokeObjectURL(lastResultUrl);
-  lastResultUrl = url;
   $('result-img').src = url;
   $('download-btn').href = url;
   const d = new Date();
