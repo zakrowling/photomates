@@ -355,7 +355,7 @@ setInterval(syncCalls, 5000);
 
 const cutouts = new Map(); // player id -> { canvas, cover, seenAt }
 function cutoutFor(id) {
-  if (!cutouts.has(id)) cutouts.set(id, { canvas: Object.assign(document.createElement('canvas'), { width: SEND, height: SEND }), cover: 0, bottom: 1, seenAt: 0 });
+  if (!cutouts.has(id)) cutouts.set(id, { canvas: Object.assign(document.createElement('canvas'), { width: SEND, height: SEND }), cover: 0, bottom: 1, seenAt: 0, version: 0 });
   return cutouts.get(id);
 }
 
@@ -370,6 +370,7 @@ function updateCutouts(now) {
     const c = cutoutFor(p.id);
     if (!src) return;
     const { cover, bottom } = unpack(src, c.canvas);
+    c.version++;
     c.cover = cover;
     // Smoothed, so people don't bob up and down as they move.
     c.bottom += (bottom - c.bottom) * 0.15;
@@ -382,7 +383,7 @@ function livePeople(now) {
   return state.players.map((p) => {
     const c = cutouts.get(p.id);
     const visible = c && now - c.seenAt < 2000;
-    return { seat: p.seat, color: p.color, image: visible ? c.canvas : null, bottom: c ? c.bottom : 1 };
+    return { seat: p.seat, color: p.color, image: visible ? c.canvas : null, bottom: c ? c.bottom : 1, version: c ? c.version : 0 };
   });
 }
 
@@ -704,7 +705,7 @@ async function compose(shot) {
     const still = shot.stills.get(p.id);
     const image = still || (live && performance.now() - live.seenAt < 4000 ? live.canvas : null);
     const bottom = still ? measureBottom(still) : (live ? live.bottom : 1);
-    return { seat: p.seat, color: p.color, image, bottom };
+    return { seat: p.seat, color: p.color, image, bottom, version: still ? 'still' : (live ? live.version : 0) };
   });
   Scenes.render(c, shot.scene, people);
   state.lastShot = { n: shot.n, people: shot.players.length, stills: shot.stills.size };

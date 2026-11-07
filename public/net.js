@@ -6,7 +6,8 @@
 //   the remaining players hand hosting to the next player, so the room lives while anyone is in it.
 // The API mirrors the Socket.IO calls client.js used: net.on(event, fn) and net.emit(event, ...args, ack).
 (function () {
-  const PEER_PREFIX = 'photomates-v1-';
+  // Bumped when hosts and players need the same version (v2: Office, Outdoor Theatre and The Matey Bunch).
+  const PEER_PREFIX = 'photomates-v2-';
   const CONNECT_TIMEOUT_MS = 12000;
   const SERVER_UNREACHABLE =
     "Couldn't reach the PeerJS matchmaking server. A work network, VPN or ad blocker may be blocking it.";

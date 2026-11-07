@@ -12,6 +12,9 @@
   const PART_CHARS = 14000; // PeerJS sends at most ~16KB per message, so photos go in pieces
   const MAX_PARTS = Math.ceil(MAX_STILL_CHARS / PART_CHARS);
   const SCENES = ['office', 'outdoor', 'stadium', 'brady'];
+  // Any well-formed scene name is allowed (not just SCENES), so adding a scene never needs every host
+  // to update; browsers that don't know a scene show the first one instead.
+  const SCENE_ID = /^[a-z][a-z0-9-]{1,23}$/;
   const ROOM_CODE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
   const COLORS = [
     '#ff5d8f', '#3fa7ff', '#ffb52e', '#36c98e', '#a46bff', '#ff7a45',
@@ -105,7 +108,7 @@
       if (!msg || typeof msg !== 'object' || !this.players.has(id)) return false;
       switch (msg.type) {
         case 'scene':
-          if (!SCENES.includes(msg.id) || msg.id === this.scene) return false;
+          if (typeof msg.id !== 'string' || !SCENE_ID.test(msg.id) || msg.id === this.scene) return false;
           this.scene = msg.id;
           this.broadcastLobby();
           return true;

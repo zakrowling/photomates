@@ -219,12 +219,29 @@
     return cells;
   }
 
+  // The Matey Bunch (assets/bg/the-matey-bunch.jpg): the photo's 3×3 grid with the logo in the middle
+  // square leaves 8 squares for people, filled in a balanced order. Bigger groups use the drawn grid.
+  const MATEY_PHOTO = 'assets/bg/the-matey-bunch.jpg';
+  const MATEY_CELLS = [
+    { x: 482, y: 0, w: 318, h: 234 }, // top middle
+    { x: 482, y: 486, w: 318, h: 234 }, // bottom middle
+    { x: 160, y: 240, w: 316, h: 240 }, // middle left
+    { x: 805, y: 240, w: 315, h: 240 }, // middle right
+    { x: 160, y: 0, w: 316, h: 234 }, // corners
+    { x: 805, y: 0, w: 315, h: 234 },
+    { x: 160, y: 486, w: 316, h: 234 },
+    { x: 805, y: 486, w: 315, h: 234 },
+  ];
+  const usesPhotoGrid = (n) => n <= MATEY_CELLS.length;
+
   const brady = {
     id: 'brady',
-    name: 'Brady Bunch',
+    name: 'The Matey Bunch',
     kind: 'grid',
-    cells: bradyCells,
+    cells: (n) => (usesPhotoGrid(n) ? MATEY_CELLS : bradyCells(n)),
     tone: 'saturate(1.12) contrast(1.05)',
+    // A TV title card: crisp cut-outs, no soft edges.
+    hardEdges: true,
   };
 
   const SCENES = [office, outdoor, stadium, brady];
@@ -237,7 +254,7 @@
       return scene.cells(n).slice(0, n).map((cell) => {
         // Head and shoulders filling the cell's height, face in the upper middle.
         const size = Math.min(cell.w * 1.1, cell.h * 1.2);
-        return { x: cell.x + cell.w / 2 - size / 2, y: cell.y - size * 0.06, size, clip: cell, row: 0 };
+        return { x: cell.x + cell.w / 2 - size / 2, y: cell.y - size * 0.06, size, clip: cell, row: 0, bench: cell.y + cell.h };
       });
     }
     // On your own, you get the middle seat.
@@ -264,10 +281,19 @@
     if (scene.kind === 'grid') {
       c.fillStyle = '#0b0b0f';
       c.fillRect(0, 0, W, H);
+      const photoGrid = usesPhotoGrid(people.length) && photo(MATEY_PHOTO);
+      if (photoGrid) {
+        // The 4:3 photo in the middle of the 16:9 stage, black either side.
+        const img = photoGrid;
+        const k = H / img.naturalHeight;
+        c.drawImage(img, (W - img.naturalWidth * k) / 2, 0, img.naturalWidth * k, H);
+      }
       seats.forEach((s, i) => {
         const cell = s.clip;
-        c.fillStyle = '#5e9de6';
-        c.fillRect(cell.x, cell.y, cell.w, cell.h);
+        if (!photoGrid) {
+          c.fillStyle = '#5e9de6';
+          c.fillRect(cell.x, cell.y, cell.w, cell.h);
+        }
         c.save();
         c.beginPath();
         c.rect(cell.x, cell.y, cell.w, cell.h);
@@ -302,9 +328,9 @@
     const rows = scene.kind === 'rows';
     let size = s.size;
     let y = s.y;
-    if (rows) {
-      // If their body ends above the desk (they sit close to their camera), first grow them a little
-      // around their face, then lower them only as much as still needed so the desk hides the end.
+    if (s.bench !== undefined) {
+      // If their body ends above the desk (or the bottom of their square), first grow them a little
+      // around their face, then lower them only as much as still needed so it hides the end.
       const bottom = person.bottom ?? 1;
       const faceY = s.y + FACE_AT * s.size;
       const below = Math.max(0.05, bottom - FACE_AT);
@@ -330,7 +356,7 @@
     t.clearRect(0, 0, px, px);
     const depth = rows ? (scene.rows.length - 1 - s.row) * 0.35 : 0;
     t.filter = `${scene.tone}${depth ? ` blur(${(depth * res).toFixed(2)}px)` : ''}`;
-    t.drawImage(person.image, 0, 0, px, px);
+    t.drawImage(scene.hardEdges ? hardened(person) : person.image, 0, 0, px, px);
     t.filter = 'none';
     if (rows) {
       // The desk's (or step's) shadow across their lower body.
@@ -347,6 +373,32 @@
     if (rows) c.filter = 'drop-shadow(0 3px 7px rgba(0,0,0,0.45))';
     c.drawImage(scratch, x, y, size, size);
     c.restore();
+  }
+
+  // A copy of someone's cut-out with crisp edges: soft (feathered or faded) edges snap to fully in or
+  // out. Cached per picture and only redone when the picture changes (person.version).
+  const hardCache = new WeakMap();
+  function hardened(person) {
+    const src = person.image;
+    const w = src.naturalWidth || src.width;
+    const h = src.naturalHeight || src.height;
+    let entry = hardCache.get(src);
+    if (entry && entry.version === person.version && entry.canvas.width === w) return entry.canvas;
+    if (!entry) {
+      entry = { canvas: document.createElement('canvas'), version: null };
+      hardCache.set(src, entry);
+    }
+    entry.canvas.width = w;
+    entry.canvas.height = h;
+    const ctx = entry.canvas.getContext('2d', { willReadFrequently: true });
+    ctx.clearRect(0, 0, w, h);
+    ctx.drawImage(src, 0, 0);
+    const img = ctx.getImageData(0, 0, w, h);
+    const d = img.data;
+    for (let i = 3; i < d.length; i += 4) d[i] = Math.max(0, Math.min(255, (d[i] - 110) * 6 + 128));
+    ctx.putImageData(img, 0, 0);
+    entry.version = person.version;
+    return entry.canvas;
   }
 
   // Someone without a camera (yet): a soft silhouette in their colour.

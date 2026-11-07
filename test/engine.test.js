@@ -45,15 +45,16 @@ test('leaving frees the seat and hands hosting on', () => {
   assert.deepEqual(lobby.players.map((p) => [p.id, p.seat]), [['b', 0], ['c', 1]]);
 });
 
-test('anyone can switch the scene, to known scenes only', () => {
+test('anyone can switch the scene, including scenes this host has never heard of', () => {
   const { room, last } = makeRoom();
   room.join('a');
   room.join('b');
   assert.equal(room.input('b', { type: 'scene', id: 'stadium' }), true);
   assert.equal(last('lobbyUpdate').data.scene, 'stadium');
-  assert.equal(room.input('b', { type: 'scene', id: 'moon' }), false);
+  assert.equal(room.input('b', { type: 'scene', id: 'moon-base' }), true, 'a newer scene still works');
+  ['', 'X', '<script>', 42, 'a'.repeat(40)].forEach((id) => assert.equal(room.input('b', { type: 'scene', id }), false, String(id)));
   assert.equal(room.input('ghost', { type: 'scene', id: 'brady' }), false, 'only players in the room');
-  assert.ok(SCENES.includes(room.scene));
+  assert.ok(SCENES.includes('office'));
 });
 
 test('shuffle mixes up the seats but keeps everyone', () => {
