@@ -272,7 +272,7 @@
       tone,
       seats: necks.map(([x, y, w]) => {
         const size = w * headScale;
-        return { x: x - size / 2, y: y + w * 0.3 - CHIN_AT * size, size, neck: { x, y, w } };
+        return { x: x - size / 2, y: y + w * 0.75 - CHIN_AT * size, size, neck: { x, y, w } };
       }),
       // The whole photo, fitted to the stage's height (necks are measured that way), dark either side.
       draw(c) {
