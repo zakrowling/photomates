@@ -317,7 +317,8 @@
       [323, 324, 29],
       [969, 344, 29],
     ],
-    headScale: 6.7,
+    headScale: 5.0,
+    sink: 1.0,
     // Cool, dim stage light.
     tone: 'contrast(1.05) saturate(0.9) brightness(0.92) hue-rotate(-4deg)',
     sides: '#0b1020',
@@ -365,8 +366,8 @@
       [476, 364, 31],
       [811, 362, 31],
     ],
-    headScale: 5.2,
-    sink: 1.05,
+    headScale: 4.3,
+    sink: 0.55,
     // Faded, warm 80s film.
     tone: 'sepia(0.35) saturate(0.85) contrast(0.92) brightness(1.02)',
     sides: '#f3ecec',
@@ -557,7 +558,7 @@
       t.globalCompositeOperation = 'destination-in';
       t.translate(cx, cy);
       t.scale(rx / ry, 1);
-      const g = t.createRadialGradient(0, 0, ry * 0.86, 0, 0, ry);
+      const g = t.createRadialGradient(0, 0, ry * 0.92, 0, 0, ry);
       g.addColorStop(0, 'rgba(0,0,0,1)');
       g.addColorStop(1, 'rgba(0,0,0,0)');
       t.fillStyle = g;
