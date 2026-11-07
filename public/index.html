@@ -182,10 +182,17 @@
     .result-actions .btn { width: auto; margin: 0; padding: 12px 26px; }
     #result-wait { color: var(--muted); margin: 40px 0; font-size: 20px; }
     #gallery { position: fixed; inset: 0; background: rgba(6, 12, 9, 0.82); display: flex; align-items: center; justify-content: center; padding: 24px; z-index: 60; }
-    #gallery .result-card { max-height: 92vh; overflow: auto; }
-    #gallery .gallery-grid { min-height: 140px; }
-    .gallery-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; }
-    .gallery-grid .thumb { width: 100%; }
+    /* The title, X and buttons stay put; only the strip scrolls. */
+    #gallery .result-card { max-width: 560px; max-height: calc(100vh - 48px); display: flex; flex-direction: column; }
+    /* A photobooth strip: one photo per row on white paper. */
+    .gallery-grid {
+      display: flex; flex-direction: column; gap: 14px; margin: 6px auto 4px; padding: 16px 16px 40px; width: 100%; max-width: 460px;
+      flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain;
+      background: #f7f4ec; border-radius: 6px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+    }
+    .gallery-grid .thumb { flex: none; width: 100%; aspect-ratio: auto; border: none; border-radius: 2px; background: #000; }
+    .gallery-grid .thumb img { height: auto; }
+    .gallery-grid .thumb:hover, .gallery-grid .thumb:focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; }
     .photos-btn {
       display: flex; align-items: center; gap: 8px; padding: 12px 18px; border-radius: 999px; border: 2px solid var(--green);
       background: transparent; color: var(--text); font-family: var(--display); font-size: 18px; font-weight: 700;
@@ -253,7 +260,7 @@
         <code id="room-code-txt">----</code>
         <button class="small-btn" id="copy-btn">Copy code</button>
       </div>
-      <button class="photos-btn" id="photos-btn" hidden>Your photos <span id="photos-count">0</span></button>
+      <button class="photos-btn" id="photos-btn" hidden>Your film roll <span id="photos-count">0</span></button>
       <button id="shutter"><span class="lens" aria-hidden="true"></span>Take photo</button>
       </div>
     </div>
@@ -264,7 +271,7 @@
   <div id="gallery" class="modal" hidden>
     <div class="result-card">
       <button class="modal-x" id="x-gallery" aria-label="Close">&times;</button>
-      <h2>Your photos</h2>
+      <h2>Your film roll</h2>
       <p class="gallery-title" id="gallery-title">Every photo from this session. Click one to open it in a new tab.</p>
       <div class="gallery-grid" id="gallery-strip"></div>
       <div class="result-actions">
