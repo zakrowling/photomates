@@ -852,7 +852,7 @@ function showResult(url) {
     $('download-btn').removeAttribute('download');
     $('download-btn').target = '_blank';
     $('download-btn').rel = 'noopener';
-    $('download-btn').textContent = 'Open photo in new tab';
+    $('download-btn').textContent = 'Download Image ↗';
     return;
   }
   const d = new Date();

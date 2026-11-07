@@ -275,11 +275,12 @@
   // of a neck: necks are [x, y, width] for the middle of each neck's top edge on the stage. Heads are
   // sized from the neck's width and placed so the chin sits a little over the neck top.
   const CHIN_AT = 0.585; // how far down each person's picture their chin is (see updateCrop in client.js)
-  function bodyScene({ id, name, src, necks, tone, headScale = 5.1, sides = '#0a0d16', sink = 0.75, aspect = 1.5 }) {
+  function bodyScene({ id, name, src, necks, tone, headScale = 5.1, sides = '#0a0d16', sink = 0.75, aspect = 1.5, illustrate = false }) {
     return {
       id,
       name,
       kind: 'heads',
+      illustrate,
       // The photo's own shape: the booth and the finished photo are cropped to it.
       frame: () => Math.round(H * aspect),
       capacity: necks.length,
@@ -333,9 +334,10 @@
     ],
     headScale: 5.8,
     sink: 1.0,
-    // Cool, dim stage light.
-    tone: 'contrast(1.05) saturate(0.9) brightness(0.92) hue-rotate(-4deg)',
+    // Cool, dim stage light, with faces drawn like the illustration: flat shading and inked outlines.
+    tone: 'contrast(1.12) saturate(1.1) brightness(0.95) hue-rotate(-4deg) blur(0.6px)',
     sides: '#0b1020',
+    illustrate: true,
   });
 
 
@@ -730,9 +732,13 @@
     t.save();
     t.clearRect(0, 0, px, px);
     const depth = rows ? (scene.rows.length - 1 - s.row) * 0.35 : 0;
-    t.filter = `${scene.tone}${depth ? ` blur(${(depth * res).toFixed(2)}px)` : ''}`;
-    t.drawImage(crisp || person.image, 0, 0, px, px);
-    t.filter = 'none';
+    if (scene.illustrate) {
+      t.drawImage(inked(person, scene.tone), 0, 0, px, px);
+    } else {
+      t.filter = `${scene.tone}${depth ? ` blur(${(depth * res).toFixed(2)}px)` : ''}`;
+      t.drawImage(crisp || person.image, 0, 0, px, px);
+      t.filter = 'none';
+    }
     if (s.neck) {
       // Heads only: keep a soft oval around the head (hair to chin), so shoulders and shirt disappear and
       // the body underneath is the photo's.
@@ -767,6 +773,79 @@
     c.drawImage(scratch, x, y, size, size);
     c.restore();
   }
+
+  // Makes a webcam picture look hand drawn: shading flattened into a few bands (keeping each pixel's
+  // colour) and dark ink lines wherever the brightness changes sharply (jaw, glasses, hair, eyes).
+  // Cached per picture (redone when it changes), so repeated seats cost nothing.
+  const BANDS = 5;
+  const inkCache = new WeakMap();
+  function inked(person, tone) {
+    const src = person.image;
+    const px = src.naturalWidth || src.width;
+    let entry = inkCache.get(src);
+    if (entry && entry.version === person.version && entry.px === px) return entry.canvas;
+    if (!entry) {
+      entry = { canvas: document.createElement('canvas') };
+      inkCache.set(src, entry);
+    }
+    const ink = entry.canvas;
+    if (ink.width !== px) {
+      ink.width = px;
+      ink.height = px;
+    }
+    const t = ink.getContext('2d', { willReadFrequently: true });
+    t.clearRect(0, 0, px, px);
+    t.filter = tone;
+    t.drawImage(src, 0, 0, px, px);
+    t.filter = 'none';
+    illustrate(t, px);
+    entry.version = person.version;
+    entry.px = px;
+    return ink;
+  }
+
+  function illustrate(t, px) {
+    // Only the head is kept (see the neck mask in drawPerson), so only it is drawn.
+    const x0 = Math.floor(0.2 * px);
+    const y1 = Math.min(px, Math.ceil((CHIN_AT + 0.08) * px));
+    const w = px - 2 * x0;
+    const h = y1;
+    const img = t.getImageData(x0, 0, w, h);
+    const d = img.data;
+    const lum = new Float32Array(w * h);
+    for (let i = 0, j = 0; j < lum.length; i += 4, j++) lum[j] = 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2];
+    const ink = Math.max(1, px / 220); // thicker lines on bigger heads
+    const lo = 110 * ink;
+    const lo2 = lo * lo;
+    for (let y = 1; y < h - 1; y++) {
+      for (let x = 1; x < w - 1; x++) {
+        const j = y * w + x;
+        const i = j * 4;
+        if (d[i + 3] < 8) continue;
+        const L = lum[j] || 1;
+        const band = (Math.round((L / 255) * BANDS) / BANDS) * 255 * 0.85 + 24;
+        const k = 0.35 + (0.65 * band) / L; // mostly flat bands, with a little of the real shading
+        let r = d[i] * k;
+        let g = d[i + 1] * k;
+        let b = d[i + 2] * k;
+        // Sobel edge strength.
+        const gx = lum[j - w + 1] + 2 * lum[j + 1] + lum[j + w + 1] - lum[j - w - 1] - 2 * lum[j - 1] - lum[j + w - 1];
+        const gy = lum[j + w - 1] + 2 * lum[j + w] + lum[j + w + 1] - lum[j - w - 1] - 2 * lum[j - w] - lum[j - w + 1];
+        const m2 = gx * gx + gy * gy;
+        if (m2 > lo2) {
+          const edge = Math.min(1, (Math.sqrt(m2) - lo) / (120 * ink));
+          r = r * (1 - edge) + 22 * edge;
+          g = g * (1 - edge) + 14 * edge;
+          b = b * (1 - edge) + 20 * edge;
+        }
+        d[i] = r;
+        d[i + 1] = g;
+        d[i + 2] = b;
+      }
+    }
+    t.putImageData(img, x0, 0);
+  }
+
 
   // A copy of someone's cut-out with crisp edges: soft (feathered or faded) edges snap to fully in or
   // out. Cached per picture and only redone when the picture changes (person.version).
