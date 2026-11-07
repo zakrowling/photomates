@@ -83,3 +83,19 @@ test('a solo shuffle can land anywhere in the office, starting from the middle',
   assert.equal(spots.length, Scenes.byId('office').priority.length);
   assert.ok(Math.abs(spots[0].cx - Scenes.W / 2) < 6);
 });
+
+test('empty spots are filled by repeating the people who are there', () => {
+  const spots = Scenes.slots('brady', 2);
+  assert.equal(spots.length, 8);
+  const a = { seat: 0, image: {} };
+  const b = { seat: 3, image: {} };
+  const full = Scenes.fillUp(spots, Scenes.assign(spots, [a, b]));
+  assert.equal(full.size, 8);
+  assert.equal(full.get(0), a);
+  assert.equal(full.get(3), b);
+  const counts = [a, b].map((p) => [...full.values()].filter((x) => x === p).length);
+  assert.deepEqual(counts, [4, 4], 'shared out evenly');
+  // People without a camera aren't repeated.
+  const ghost = { seat: 0, image: null };
+  assert.equal(Scenes.fillUp(spots, Scenes.assign(spots, [ghost])).size, 1);
+});

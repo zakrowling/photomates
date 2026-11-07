@@ -444,6 +444,19 @@
     return at;
   }
 
+  // Fills every empty spot by repeating the people already there (in spot order), so a scene always
+  // looks full: on your own, every seat is you. Only people with a picture are repeated.
+  function fillUp(spots, at) {
+    const real = [...at.entries()].sort((a, b) => a[0] - b[0]).map(([, p]) => p).filter((p) => p.image);
+    if (!real.length) return at;
+    const full = new Map(at);
+    let k = 0;
+    spots.forEach((_, i) => {
+      if (!full.has(i)) full.set(i, real[k++ % real.length]);
+    });
+    return full;
+  }
+
   /**
    * Draw a scene with everyone in it.
    * people: [{ seat, image (canvas/img or null), color, bottom }]. image null draws a placeholder;
@@ -452,7 +465,7 @@
   function render(c, sceneId, people) {
     const scene = byId(sceneId);
     const seats = slots(sceneId, people.length);
-    const at = assign(seats, people);
+    const at = fillUp(seats, assign(seats, people));
     c.save();
     if (scene.kind === 'heads') {
       // The bodies, then everyone's head on top, back to front (higher necks are further back).
@@ -676,5 +689,5 @@
     c.restore();
   }
 
-  return { W, H, SCENES, layout, slots, assign, render, byId, bradyCells };
+  return { W, H, SCENES, layout, slots, assign, fillUp, render, byId, bradyCells };
 });
