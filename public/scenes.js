@@ -320,7 +320,7 @@
       [323, 324, 29],
       [969, 344, 29],
     ],
-    headScale: 5.0,
+    headScale: 5.8,
     sink: 1.0,
     // Cool, dim stage light.
     tone: 'contrast(1.05) saturate(0.9) brightness(0.92) hue-rotate(-4deg)',
