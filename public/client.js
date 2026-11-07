@@ -797,19 +797,20 @@ function renderGallery() {
   const photos = state.photos || [];
   $('photos-btn').hidden = !photos.length;
   $('photos-count').textContent = photos.length;
-  $('download-all').textContent = inFrame ? 'Open all in new tabs' : `Download all (${photos.length})`;
+  // Inside an iframe each photo opens in a new tab on its own, so there's no download all.
+  $('download-all').hidden = inFrame;
+  $('download-all').textContent = `Download all (${photos.length})`;
   $('gallery-strip').replaceChildren(...photos.map((url, i) => {
-    const b = document.createElement('button');
+    const b = document.createElement('a');
     b.className = 'thumb';
-    b.setAttribute('aria-label', `Open photo ${photos.length - i}`);
+    b.href = url;
+    b.target = '_blank';
+    b.rel = 'noopener';
+    b.setAttribute('aria-label', `Open photo ${photos.length - i} in a new tab`);
     const img = document.createElement('img');
     img.src = url;
     img.alt = '';
     b.append(img);
-    b.addEventListener('click', () => {
-      $('gallery').hidden = true;
-      showResult(url);
-    });
     return b;
   }));
 }
@@ -818,7 +819,9 @@ $('photos-btn').addEventListener('click', () => {
   renderGallery();
   $('gallery').hidden = false;
 });
-$('close-gallery').addEventListener('click', () => { $('gallery').hidden = true; });
+const closeGallery = () => { $('gallery').hidden = true; };
+$('close-gallery').addEventListener('click', closeGallery);
+$('x-gallery').addEventListener('click', closeGallery);
 $('gallery').addEventListener('click', (e) => { if (e.target === $('gallery')) $('gallery').hidden = true; });
 // Every photo from this session, oldest first. Downloads are spaced out so the browser allows them all.
 $('download-all').addEventListener('click', () => {
@@ -826,12 +829,7 @@ $('download-all').addEventListener('click', () => {
   photos.forEach((url, i) => setTimeout(() => {
     const a = document.createElement('a');
     a.href = url;
-    if (inFrame) {
-      a.target = '_blank';
-      a.rel = 'noopener';
-    } else {
-      a.download = `photomates-${i + 1}.png`;
-    }
+    a.download = `photomates-${i + 1}.png`;
     document.body.append(a);
     a.click();
     a.remove();
@@ -859,10 +857,12 @@ function showResult(url) {
   const pad = (v) => String(v).padStart(2, '0');
   $('download-btn').download = `photomates-${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}-${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}.png`;
 }
-$('close-result').addEventListener('click', () => {
+function closeResult() {
   $('result').hidden = true;
   if (!state.pending) $('shutter').disabled = false;
-});
+}
+$('close-result').addEventListener('click', closeResult);
+$('x-result').addEventListener('click', closeResult);
 
 buildScenePicker();
 enterRoomFromUrl();

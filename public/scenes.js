@@ -114,7 +114,7 @@
   // chair backs. The front middle chair fills first, then the back middle, then outwards.
   const office = photoScene({
     id: 'office',
-    name: 'Office',
+    name: 'We The Jury',
     src: 'assets/bg/office.jpg',
     rows: [
       { bench: 361, faceY: 284, size: 190, xs: [289, 636, 980] },
@@ -305,7 +305,7 @@
   // in front. The middle standing one first, then the middle kneeling one, then outwards.
   const bodybuilders = bodyScene({
     id: 'bodybuilders',
-    name: 'Bodybuilders',
+    name: 'Together Strong',
     src: 'assets/bg/bodybuilders.jpg',
     necks: [
       [636, 112, 41],
@@ -322,7 +322,7 @@
   // kneeling in front. Their necks are slimmer than the bodybuilders', so heads are scaled up more.
   const samurai = bodyScene({
     id: 'samurai',
-    name: 'Samurai',
+    name: 'Anime-zing Crew',
     src: 'assets/bg/samurai.jpg',
     necks: [
       [640, 84, 29],
@@ -374,7 +374,7 @@
   // the background), so the necks are measured on the full photo.
   const christmas = bodyScene({
     id: 'christmas',
-    name: 'Christmas',
+    name: "Xmas '88",
     src: 'assets/bg/christmas.jpg',
     necks: [
       [650, 159, 31],
@@ -395,7 +395,7 @@
   // chair backs; the sand ledge in front hides everyone's lower half.
   const beach = photoScene({
     id: 'beach',
-    name: 'Beach',
+    name: "Life's A Beach",
     src: 'assets/bg/beach.jpg',
     rows: [
       { bench: 324, faceY: 230, size: 200, xs: [308, 649, 997] },
@@ -416,7 +416,7 @@
   // from the chest down. Middle seats fill first.
   const airplane = photoScene({
     id: 'airplane',
-    name: 'Airplane',
+    name: 'Extra Leg Room',
     src: 'assets/bg/airplane.jpg',
     rows: [{ bench: 565, faceY: 456, size: 232, xs: [183, 359, 523, 753, 919, 1093] }],
     priority: [[0, 2], [0, 3], [0, 1], [0, 4], [0, 0], [0, 5]],
@@ -432,7 +432,7 @@
   // black and white with the same faded contrast.
   const halloween = bodyScene({
     id: 'halloween',
-    name: 'Halloween',
+    name: 'Spooktober',
     src: 'assets/bg/halloween.jpg',
     necks: [
       [638, 108, 47],

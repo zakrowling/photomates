@@ -146,7 +146,13 @@
 
     #result { position: fixed; inset: 0; background: rgba(6, 12, 9, 0.82); display: flex; align-items: center; justify-content: center; padding: 24px; z-index: 70; }
     .result-card { background: var(--panel); border: 1px solid var(--line); border-radius: 20px; padding: 18px; max-width: 1100px; width: 100%; text-align: center; }
+    .result-card { position: relative; }
     .result-card h2 { margin: 0 0 12px; font-size: 28px; }
+    .modal-x {
+      position: absolute; top: 12px; right: 12px; width: 40px; height: 40px; border-radius: 50%; border: 1px solid var(--line);
+      background: transparent; color: var(--muted); font-size: 26px; line-height: 1; cursor: pointer; display: grid; place-items: center;
+    }
+    .modal-x:hover { color: #fff; background: rgba(255, 255, 255, 0.08); }
     #result-img { width: 100%; border-radius: 12px; display: block; background: #000; }
     #result .result-card { max-width: 825px; }
     #result-img { max-height: 62vh; width: auto; max-width: 100%; margin: 0 auto; }
@@ -166,7 +172,7 @@
     .photos-btn span { background: var(--green); color: #fff; border-radius: 999px; min-width: 26px; padding: 1px 8px; font-size: 15px; }
     .gallery-title { color: var(--muted); margin: 0 0 8px; font-size: 16px; }
     .gallery-strip { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 6px; }
-    .thumb { flex: none; cursor: pointer; padding: 0; border: 2px solid var(--line); border-radius: 10px; overflow: hidden; background: #000; width: 176px; aspect-ratio: 16 / 9; }
+    .thumb { display: block; flex: none; cursor: pointer; padding: 0; border: 2px solid var(--line); border-radius: 10px; overflow: hidden; background: #000; width: 176px; aspect-ratio: 16 / 9; }
     .thumb:hover, .thumb:focus-visible { border-color: var(--accent); outline: none; }
     .thumb img { width: 100%; height: 100%; object-fit: contain; display: block; }
     #videos { position: fixed; left: -10000px; top: 0; width: 1px; height: 1px; overflow: hidden; }
@@ -175,7 +181,7 @@
 <body>
   <header>
     <h1><img src="assets/photomates-logo.svg" alt="Photomates" class="logo"></h1>
-    <p class="subtitle">A together-mode photobooth for up to 6 workmates. Backgrounds off, say cheese!</p>
+    <p class="subtitle">A together-mode photobooth for up to 6 workmates.</p>
   </header>
 
   <div id="lobby-card" class="card">
@@ -222,8 +228,9 @@
 
   <div id="gallery" class="modal" hidden>
     <div class="result-card">
+      <button class="modal-x" id="x-gallery" aria-label="Close">&times;</button>
       <h2>Your photos</h2>
-      <p class="gallery-title" id="gallery-title">Every photo from this session. Click one to see it bigger.</p>
+      <p class="gallery-title" id="gallery-title">Every photo from this session. Click one to open it in a new tab.</p>
       <div class="gallery-grid" id="gallery-strip"></div>
       <div class="result-actions">
         <button class="btn" id="download-all">Download all</button>
@@ -234,6 +241,7 @@
 
   <div id="result" hidden>
     <div class="result-card">
+      <button class="modal-x" id="x-result" aria-label="Close">&times;</button>
       <h2 id="result-title">Your photo</h2>
       <p id="result-wait">Developing...</p>
       <img id="result-img" alt="Group photo" hidden>
