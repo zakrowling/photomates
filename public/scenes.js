@@ -47,7 +47,7 @@
 
   // Draws the photo to cover the stage (cropping the sides if it's a little wider than 16:9), optionally
   // only from y down.
-  function drawPhoto(c, src, fromY = 0) {
+  function drawPhoto(c, src, fromY = 0, slope = 0) {
     const img = photo(src);
     if (!img) {
       if (!fromY) {
@@ -56,10 +56,10 @@
       }
       return;
     }
-    drawPhotoImage(c, img, fromY);
+    drawPhotoImage(c, img, fromY, slope);
   }
 
-  function drawPhotoImage(c, img, fromY = 0) {
+  function drawPhotoImage(c, img, fromY = 0, slope = 0) {
     const iw = img.naturalWidth || img.width;
     const ih = img.naturalHeight || img.height;
     const k = Math.max(W / iw, H / ih);
@@ -69,7 +69,15 @@
     const dy = (H - dh) / 2;
     c.save();
     c.beginPath();
-    c.rect(0, fromY, W, H - fromY);
+    if (slope) {
+      c.moveTo(0, fromY - slope * W / 2);
+      c.lineTo(W, fromY + slope * W / 2);
+      c.lineTo(W, H);
+      c.lineTo(0, H);
+      c.closePath();
+    } else {
+      c.rect(0, fromY, W, H - fromY);
+    }
     c.clip();
     c.drawImage(img, dx, dy, dw, dh);
     c.restore();
@@ -78,7 +86,9 @@
   // A scene made from a straight-on photo of rows of seats. rows (on the 1280×720 stage, back to front):
   // bench is the edge that hides people's lower half (a desk top, a step's front edge), faceY is where a
   // seated face goes, size is how big people are in that row, xs are the seats' centres.
-  function photoScene({ id, name, src, rows, priority, solo, tone, benchShadow = 0.5, capacity }) {
+  // A row's optional slope tilts its bench edge (stage px down per px right, about the middle), and
+  // overlap is how far below that edge people's bodies should reach, so their soft bottom edge is hidden.
+  function photoScene({ id, name, src, rows, priority, solo, tone, benchShadow = 0.5, capacity, overlap }) {
     return {
       id,
       name,
@@ -89,12 +99,13 @@
       solo,
       tone,
       benchShadow,
+      overlap,
       background(c) {
         drawPhoto(c, src);
       },
       seatBacks() {},
       front(c, r) {
-        drawPhoto(c, src, rows[r].bench);
+        drawPhoto(c, src, rows[r].bench, rows[r].slope);
       },
     };
   }
@@ -386,7 +397,8 @@
     src: 'assets/bg/beach.jpg',
     rows: [
       { bench: 324, faceY: 230, size: 200, xs: [308, 649, 997] },
-      { bench: 575, faceY: 448, size: 290, xs: [213, 646, 1083] },
+      // The sand wall drops a little to the right.
+      { bench: 574, slope: 0.007, faceY: 448, size: 290, xs: [213, 646, 1083] },
     ],
     priority: [[1, 1], [0, 1], [1, 0], [1, 2], [0, 0], [0, 2]],
     solo: [1, 1],
@@ -394,6 +406,7 @@
     // Bright tropical sun.
     tone: 'saturate(1.08) contrast(1.04) brightness(1.06)',
     benchShadow: 0.2,
+    overlap: 12,
   });
 
   // Airplane (assets/bg/airplane.jpg): the 6 front-row seats either side of the aisle. Everyone
@@ -447,7 +460,7 @@
     headScale: 4.4,
     sink: 0.9,
     // Warm, golden meadow light.
-    tone: 'saturate(0.95) sepia(0.2) contrast(0.96) brightness(1.02)',
+    tone: 'sepia(0.22) saturate(1.5) contrast(1.06) brightness(1.03)',
   });
 
 
@@ -556,7 +569,8 @@
       const size = row.size;
       // Photo rows say where the face goes; drawn rows tuck the bottom of the picture behind the bench.
       const y = row.faceY !== undefined ? row.faceY - FACE_AT * size : row.bench + size * 0.28 - size;
-      return { x: row.xs[i] - size / 2, y, size, row: r, bench: row.bench, cx: row.xs[i] };
+      const bench = row.bench + (row.slope || 0) * (row.xs[i] - W / 2);
+      return { x: row.xs[i] - size / 2, y, size, row: r, bench, cx: row.xs[i] };
     });
   }
 
@@ -682,11 +696,11 @@
       const bottom = hardCache.get(person.image).bottom;
       const faceY = s.y + FACE_AT * s.size;
       const below = Math.max(0.05, bottom - FACE_AT);
-      let need = s.bench + 4 - (s.y + bottom * s.size);
+      let need = s.bench + (scene.overlap ?? 4) - (s.y + bottom * s.size);
       if (need > 0) {
         size = s.size * Math.min(1.2, 1 + need / (below * s.size));
         y = faceY - FACE_AT * size;
-        need = s.bench + 4 - (y + bottom * size);
+        need = s.bench + (scene.overlap ?? 4) - (y + bottom * size);
         if (need > 0) y += need;
       }
     } else if (s.bench !== undefined) {
@@ -695,11 +709,11 @@
       const bottom = person.bottom ?? 1;
       const faceY = s.y + FACE_AT * s.size;
       const below = Math.max(0.05, bottom - FACE_AT);
-      let need = s.bench + 4 - (s.y + bottom * s.size);
+      let need = s.bench + (scene.overlap ?? 4) - (s.y + bottom * s.size);
       if (need > 0) {
         size = s.size * Math.min(1.12, 1 + need / (below * s.size));
         y = faceY - FACE_AT * size;
-        need = s.bench + 4 - (y + bottom * size);
+        need = s.bench + (scene.overlap ?? 4) - (y + bottom * size);
         if (need > 0) y += Math.min(need, 0.3 * s.size);
       }
     }
