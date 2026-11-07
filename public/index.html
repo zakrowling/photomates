@@ -7,26 +7,28 @@
   <meta name="description" content="A group photobooth for remote mates. Everyone's camera, backgrounds removed, together in one scene.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Jost:wght@400;500;600&display=swap" rel="stylesheet">
   <style>
     :root {
-      --bg: #141218;
-      --panel: #201d26;
-      --line: #36313f;
-      --text: #f6f3fa;
-      --muted: #b9b2c6;
-      --accent: #ff5d8f;
-      --accent-hi: #ff7aa4;
-      --accent-ink: #2a0614;
+      --bg: #0f1a16;
+      --panel: #17251f;
+      --line: #2a3d34;
+      --text: #f3f7f4;
+      --muted: #a9bdb3;
+      --accent: #fbcb11;
+      --accent-hi: #ffd84a;
+      --accent-ink: #1d1600;
+      --green: #37a082;
+      --display: 'Bricolage Grotesque', 'Jost', system-ui, sans-serif;
     }
     * { box-sizing: border-box; }
     html, body { margin: 0; }
-    html { zoom: 0.85; background: #141218; }
+    html { background: #0f1a16; }
     body {
-      font-family: Fredoka, system-ui, sans-serif;
+      font-family: Jost, system-ui, sans-serif;
       color: var(--text);
-      background: radial-gradient(1200px 600px at 50% -10%, #3a2140 0%, var(--bg) 60%);
-      min-height: calc(100vh / 0.85);
+      background: radial-gradient(1200px 600px at 50% -10%, #1e4a3b 0%, var(--bg) 60%);
+      min-height: 100vh;
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -36,7 +38,8 @@
     button { cursor: pointer; }
     [hidden] { display: none !important; }
     h1 { margin: 0; font-size: 56px; font-weight: 700; letter-spacing: -1px; }
-    h1 span { color: var(--accent); }
+    h1 .logo { display: block; width: min(560px, 86vw); height: auto; margin: 0 auto; }
+    h1, h2, h3, .btn, #shutter, #scene-select, .invite code, #countdown { font-family: var(--display); }
     .subtitle { margin: 4px 0 20px; color: var(--muted); font-size: 19px; text-align: center; }
 
     .card {
@@ -65,15 +68,15 @@
     .btn:hover:not(:disabled) { background: var(--accent-hi); }
     .btn:active:not(:disabled) { transform: translateY(1px); }
     .btn:disabled { opacity: 0.5; cursor: not-allowed; }
-    .btn.secondary { background: #ece7f3; color: #1d1a22; }
-    .btn.secondary:hover:not(:disabled) { background: #fff; }
+    .btn.secondary { background: var(--green); color: #fff; }
+    .btn.secondary:hover:not(:disabled) { background: #43b896; }
     .btn.ghost { background: transparent; color: var(--muted); }
     .btn.ghost:hover:not(:disabled) { color: var(--text); background: rgba(255, 255, 255, 0.06); }
     .btn:focus-visible, .chip:focus-visible, #shutter:focus-visible, #scene-select:focus-visible { outline: 3px solid #ffd166; outline-offset: 3px; }
     .or { color: var(--muted); margin: 6px 0; }
     #room-input {
       display: block; width: 100%; padding: 10px; font-size: 34px; font-weight: 600; text-align: center;
-      letter-spacing: 10px; text-transform: uppercase; background: #15131a; border: 1px solid var(--line); border-radius: 14px;
+      letter-spacing: 10px; text-transform: uppercase; background: #0c1612; border: 1px solid var(--line); border-radius: 14px;
     }
     .hint { color: var(--muted); font-size: 16px; margin: 8px 0; }
     .error { color: #ff8fa8; min-height: 1em; margin: 8px 0 0; }
@@ -84,10 +87,9 @@
     body.in-booth { padding-top: 14px; }
     .topbar { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; flex-wrap: wrap; }
     .brand { font-size: 26px; font-weight: 700; margin-right: auto; }
-    .brand span { color: var(--accent); }
     .invite { display: flex; align-items: center; gap: 8px; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 4px 4px 4px 12px; }
     .invite code { font-family: inherit; font-weight: 600; letter-spacing: 3px; font-size: 18px; }
-    .small-btn { padding: 7px 12px; border-radius: 9px; border: none; background: #ece7f3; color: #1d1a22; font-weight: 600; font-size: 15px; }
+    .small-btn { padding: 7px 12px; border-radius: 9px; border: none; background: var(--green); color: #fff; font-weight: 600; font-size: 15px; }
     .small-btn.ghost { background: transparent; color: var(--muted); border: 1px solid var(--line); }
     .small-btn:hover { filter: brightness(1.08); }
 
@@ -113,12 +115,12 @@
       background: var(--panel); border: 2px solid var(--line); border-radius: 16px;
       box-shadow: 0 6px 18px rgba(0, 0, 0, 0.3); transition: border-color 0.15s, background 0.15s;
     }
-    #scene-select:hover { border-color: var(--accent); background: #28232f; }
+    #scene-select:hover { border-color: var(--accent); background: #1d3029; }
     #scene-select option { background: var(--panel); color: var(--text); font-size: 18px; }
     #scene-select option:disabled { color: #6f6880; }
     .select-wrap::after {
       content: ''; position: absolute; right: 20px; top: 50%; width: 10px; height: 10px; pointer-events: none;
-      border-right: 3px solid var(--accent); border-bottom: 3px solid var(--accent); transform: translateY(-70%) rotate(45deg);
+      border-right: 3px solid var(--green); border-bottom: 3px solid var(--green); transform: translateY(-70%) rotate(45deg);
     }
     .chip { padding: 9px 16px; border-radius: 999px; border: 1px solid var(--line); background: var(--panel); color: var(--text); font-size: 17px; font-weight: 500; }
     .chip[aria-pressed="true"] { background: var(--text); color: #1d1a22; border-color: var(--text); }
@@ -126,12 +128,11 @@
     .spacer { flex: 1; }
     #shutter {
       display: flex; align-items: center; gap: 10px; padding: 12px 26px 12px 14px; border-radius: 999px; border: none;
-      background: var(--accent); color: var(--accent-ink); font-size: 22px; font-weight: 700; box-shadow: 0 8px 24px rgba(255, 93, 143, 0.35);
+      background: var(--accent); color: var(--accent-ink); font-size: 22px; font-weight: 700; box-shadow: 0 8px 24px rgba(251, 203, 17, 0.3);
     }
     #shutter:hover:not(:disabled) { background: var(--accent-hi); }
     #shutter:disabled { opacity: 0.6; cursor: default; }
     #shutter .lens { width: 34px; height: 34px; border-radius: 50%; background: #fff; border: 6px solid var(--accent-ink); }
-    .people { color: var(--muted); font-size: 16px; }
 
     #result { position: fixed; inset: 0; background: rgba(8, 6, 12, 0.82); display: flex; align-items: center; justify-content: center; padding: 24px; z-index: 10; }
     .result-card { background: var(--panel); border: 1px solid var(--line); border-radius: 20px; padding: 18px; max-width: 1100px; width: 100%; text-align: center; }
@@ -151,7 +152,7 @@
 </head>
 <body>
   <header>
-    <h1>Photo<span>mates</span></h1>
+    <h1><img src="assets/photomates-logo.svg" alt="Photomates" class="logo"></h1>
     <p class="subtitle">A group photobooth for remote mates. Backgrounds off, everyone together, say cheese.</p>
   </header>
 
@@ -190,8 +191,6 @@
         <code id="room-code-txt">----</code>
         <button class="small-btn" id="copy-btn">Copy invite</button>
       </div>
-      <span class="people" id="people"></span>
-      <button class="small-btn ghost" id="leave-btn">Leave</button>
       <button id="shutter"><span class="lens" aria-hidden="true"></span>Take photo</button>
       </div>
     </div>

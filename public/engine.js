@@ -18,7 +18,7 @@
   const SCENE_ID = /^[a-z][a-z0-9-]{1,23}$/;
   const ROOM_CODE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
   const COLORS = [
-    '#ff5d8f', '#3fa7ff', '#ffb52e', '#36c98e', '#a46bff', '#ff7a45',
+    '#37a082', '#fbcb11', '#3fa7ff', '#ff7a45', '#a46bff', '#ff5d8f',
     '#2ec4d6', '#e85bd8', '#8bc34a', '#f25c54', '#5b7cfa', '#d4a017',
   ];
   const NAMES = [

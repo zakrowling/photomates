@@ -518,7 +518,6 @@ function applyLobby(payload) {
   $('shuffle-btn').textContent = cap && payload.players.length > cap ? 'Shuffle who\'s in' : 'Shuffle seats';
   $('scene-select').value = state.scene;
   const n = state.players.length;
-  $('people').textContent = `${n} in the booth`;
   $('shuffle-btn').disabled = Scenes.slots(state.scene, n).length < 2;
   history.replaceState(null, '', `${basePath()}?room=${encodeURIComponent(payload.roomCode.toLowerCase())}${DEBUG ? '&debug' : ''}`);
   syncCalls();
@@ -577,10 +576,6 @@ $('join-btn').addEventListener('click', () => {
   socket.emit('joinRoom', code, handleJoinResponse);
 });
 $('room-input').addEventListener('keydown', (e) => { if (e.key === 'Enter') $('join-btn').click(); });
-$('leave-btn').addEventListener('click', () => {
-  socket.emit('leaveRoom');
-  leaveBooth();
-});
 // Move everyone to random spots in this scene (on your own, that moves you somewhere new).
 $('shuffle-btn').addEventListener('click', () => {
   socket.emit('input', { type: 'shuffle', spots: Scenes.slots(state.scene, state.players.length).length });
@@ -756,7 +751,7 @@ async function compose(shot) {
   });
   Scenes.render(c, shot.scene, people);
   state.lastShot = { n: shot.n, people: shot.players.length, stills: shot.stills.size };
-  c.font = '600 18px Fredoka, system-ui, sans-serif';
+  c.font = "700 18px 'Bricolage Grotesque', Jost, system-ui, sans-serif";
   c.textAlign = 'right';
   c.fillStyle = 'rgba(255,255,255,0.7)';
   c.shadowColor = 'rgba(0,0,0,0.5)';
