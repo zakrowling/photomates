@@ -78,11 +78,12 @@
   // A scene made from a straight-on photo of rows of seats. rows (on the 1280×720 stage, back to front):
   // bench is the edge that hides people's lower half (a desk top, a step's front edge), faceY is where a
   // seated face goes, size is how big people are in that row, xs are the seats' centres.
-  function photoScene({ id, name, src, rows, priority, solo, tone, benchShadow = 0.5 }) {
+  function photoScene({ id, name, src, rows, priority, solo, tone, benchShadow = 0.5, capacity }) {
     return {
       id,
       name,
       kind: 'rows',
+      capacity,
       rows,
       priority,
       solo,
@@ -373,7 +374,23 @@
     sides: '#f3ecec',
   });
 
-  const SCENES = [office, brady, bodybuilders, samurai, christmas];
+  // Vintage Airplane (assets/bg/airplane.jpg): the 6 front-row seats either side of the aisle. Everyone
+  // sits in a seat with their face in front of its headrest, and the seat-back tables in front hide them
+  // from the chest down. Middle seats fill first.
+  const airplane = photoScene({
+    id: 'airplane',
+    name: 'Vintage Airplane',
+    src: 'assets/bg/airplane.jpg',
+    rows: [{ bench: 565, faceY: 456, size: 232, xs: [183, 359, 523, 753, 919, 1093] }],
+    priority: [[0, 2], [0, 3], [0, 1], [0, 4], [0, 0], [0, 5]],
+    solo: [0, 2],
+    capacity: 6,
+    // Warm, golden cabin light.
+    tone: 'sepia(0.25) saturate(0.9) contrast(0.95) brightness(1.03)',
+    benchShadow: 0.35,
+  });
+
+  const SCENES = [office, airplane, brady, bodybuilders, samurai, christmas];
   const byId = (id) => SCENES.find((s) => s.id === id) || SCENES[0];
 
   // Seat rectangles (where each person's square picture goes) for n people, in seat order.

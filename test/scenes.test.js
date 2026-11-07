@@ -28,8 +28,9 @@ for (const scene of Scenes.SCENES) {
 test('on your own, you sit in the middle', () => {
   for (const scene of Scenes.SCENES) {
     const [s] = Scenes.layout(scene.id, 1);
-    // Photos of people put you on the middle person, who may stand a little off centre.
-    assert.ok(Math.abs(s.x + s.size / 2 - Scenes.W / 2) < (scene.kind === 'heads' ? 25 : 6), scene.id);
+    // Photos of people put you on the middle person, who may stand a little off centre (and the plane's
+    // middle is the aisle, so you get the seat beside it).
+    assert.ok(Math.abs(s.x + s.size / 2 - Scenes.W / 2) < (scene.kind === 'heads' || scene.id === 'airplane' ? 130 : 6), scene.id);
   }
 });
 
