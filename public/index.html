@@ -111,7 +111,6 @@
     }
     body.in-booth { padding-bottom: 110px; }
     .controls .right { display: flex; align-items: center; gap: 10px; margin-left: auto; flex-wrap: nowrap; justify-content: flex-end; }
-    .controls .scene-picker label { display: none; }
     #scene-select { min-width: 200px; font-size: 19px; padding: 10px 46px 10px 16px; }
     .controls #shutter { white-space: nowrap; }
     @media (max-width: 1000px) {
@@ -119,7 +118,6 @@
       #scene-select { min-width: 160px; }
     }
     .scene-picker { position: relative; display: flex; align-items: center; gap: 12px; }
-    .scene-picker label { color: var(--muted); font-size: 17px; font-weight: 500; }
     .scene-picker .select-wrap { position: relative; }
     #scene-select {
       appearance: none; -webkit-appearance: none; min-width: 260px; padding: 12px 52px 12px 20px;
@@ -204,8 +202,7 @@
 
     <div class="controls">
       <div class="scene-picker">
-        <label for="scene-select">Scene</label>
-        <div class="select-wrap"><select id="scene-select"></select></div>
+        <div class="select-wrap"><select id="scene-select" aria-label="Scene"></select></div>
       </div>
       <button class="chip" id="shuffle-btn">Shuffle seats</button>
       <div class="right">
