@@ -734,7 +734,7 @@ function loadImage(src) {
   });
 }
 
-const logoImage = loadImage('assets/photomates-logo.svg').catch(() => null);
+const logoImage = loadImage('assets/workmates-logo.svg').catch(() => null);
 
 // The finished photo, at twice the stage size, from everyone's full-quality photos.
 async function compose(shot) {
@@ -753,7 +753,7 @@ async function compose(shot) {
   });
   Scenes.render(c, shot.scene, people);
   state.lastShot = { n: shot.n, people: shot.players.length, stills: shot.stills.size };
-  // The Photomates logo in the bottom right corner.
+  // The Workmates logo in the bottom right corner.
   const logo = await logoImage;
   if (logo) {
     const lw = 150;
