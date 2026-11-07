@@ -378,6 +378,24 @@
     sides: '#f3ecec',
   });
 
+  // Beach (assets/bg/beach.jpg): two tiers of 3 deckchairs on sand steps. Faces go just above the
+  // chair backs; the sand ledge in front hides everyone's lower half.
+  const beach = photoScene({
+    id: 'beach',
+    name: 'Beach',
+    src: 'assets/bg/beach.jpg',
+    rows: [
+      { bench: 324, faceY: 230, size: 200, xs: [308, 649, 997] },
+      { bench: 568, faceY: 432, size: 290, xs: [213, 646, 1083] },
+    ],
+    priority: [[1, 1], [0, 1], [1, 0], [1, 2], [0, 0], [0, 2]],
+    solo: [1, 1],
+    capacity: 6,
+    // Bright tropical sun.
+    tone: 'saturate(1.08) contrast(1.04) brightness(1.06)',
+    benchShadow: 0.2,
+  });
+
   // Airplane (assets/bg/airplane.jpg): the 6 front-row seats either side of the aisle. Everyone
   // sits in a seat with their face in front of its headrest, and the seat-back tables in front hide them
   // from the chest down. Middle seats fill first.
@@ -432,7 +450,7 @@
     tone: 'saturate(0.9) sepia(0.15) contrast(0.95) brightness(0.98)',
   });
 
-  const SCENES = [office, airplane, brady, bodybuilders, woodland, samurai, christmas, halloween];
+  const SCENES = [office, airplane, beach, brady, bodybuilders, woodland, samurai, christmas, halloween];
   const byId = (id) => SCENES.find((s) => s.id === id) || SCENES[0];
 
   // Seat rectangles (where each person's square picture goes) for n people, in seat order.

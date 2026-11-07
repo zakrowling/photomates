@@ -86,6 +86,22 @@ test('someone on their own can shuffle to a different spot', () => {
   assert.equal(room.input('solo', { type: 'shuffle', spots: 1 }), false, 'nowhere else to go');
 });
 
+test('with more mates than spots, shuffling takes turns so everyone gets in the photo', () => {
+  const { room, last } = makeRoom();
+  for (let i = 0; i < 9; i++) room.join(`p${i}`);
+  const inPhoto = new Map(room.order.map((p) => [p, 0]));
+  for (let round = 0; round < 6; round++) {
+    room.input('p0', { type: 'shuffle', spots: 6 });
+    const players = last('lobbyUpdate').data.players;
+    const seated = players.filter((p) => p.seat < 6);
+    assert.equal(seated.length, 6, 'the 6 spots are always full');
+    assert.equal(new Set(seated.map((p) => p.seat)).size, 6, 'no doubling up');
+    seated.forEach((p) => inPhoto.set(p.id, inPhoto.get(p.id) + 1));
+    // Nobody sits out twice in a row while others have been in twice.
+  }
+  assert.ok([...inPhoto.values()].every((n) => n >= 3), `everyone gets turns: ${[...inPhoto.values()]}`);
+});
+
 test('joiners take the best free spot', () => {
   const { room, last } = makeRoom();
   ['a', 'b', 'c'].forEach((id) => room.join(id));

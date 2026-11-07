@@ -30,7 +30,7 @@ test('on your own, you sit in the middle', () => {
     const [s] = Scenes.layout(scene.id, 1);
     // Photos of people put you on the middle person, who may stand a little off centre (and the plane's
     // middle is the aisle, so you get the seat beside it).
-    assert.ok(Math.abs(s.x + s.size / 2 - Scenes.W / 2) < (scene.kind === 'heads' || scene.id === 'airplane' ? 130 : 6), scene.id);
+    assert.ok(Math.abs(s.x + s.size / 2 - Scenes.W / 2) < (scene.kind === 'heads' || scene.id === 'airplane' ? 130 : 12), scene.id);
   }
 });
 

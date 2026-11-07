@@ -492,12 +492,14 @@ function applyLobby(payload) {
   $('room-code-txt').textContent = payload.roomCode;
   $('share-link').value = shareLink(payload.roomCode);
   [...$('scene-select').options].forEach((o) => {
-    // Scenes with only so many spots are off when there are more mates than that.
+    // Scenes with only so many spots take turns when there are more mates than that.
     const cap = Scenes.byId(o.value).capacity;
     const tooMany = !!cap && payload.players.length > cap;
-    o.disabled = tooMany && o.value !== state.scene;
-    o.textContent = `${Scenes.byId(o.value).name}${tooMany ? ` (up to ${cap})` : ''}`;
+    o.disabled = false;
+    o.textContent = `${Scenes.byId(o.value).name}${tooMany ? ` (${cap} at a time)` : ''}`;
   });
+  const cap = Scenes.byId(state.scene).capacity;
+  $('shuffle-btn').textContent = cap && payload.players.length > cap ? 'Shuffle who\'s in' : 'Shuffle seats';
   $('scene-select').value = state.scene;
   const n = state.players.length;
   $('people').textContent = `${n} in the booth`;

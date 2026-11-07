@@ -12,7 +12,7 @@
   const MAX_STILL_CHARS = 600_000; // a data: URL for one person's photo
   const PART_CHARS = 14000; // PeerJS sends at most ~16KB per message, so photos go in pieces
   const MAX_PARTS = Math.ceil(MAX_STILL_CHARS / PART_CHARS);
-  const SCENES = ['office', 'airplane', 'brady', 'bodybuilders', 'woodland', 'samurai', 'christmas', 'halloween'];
+  const SCENES = ['office', 'airplane', 'beach', 'brady', 'bodybuilders', 'woodland', 'samurai', 'christmas', 'halloween'];
   // Any well-formed scene name is allowed (not just SCENES), so adding a scene never needs every host
   // to update; browsers that don't know a scene show the first one instead.
   const SCENE_ID = /^[a-z][a-z0-9-]{1,23}$/;
@@ -51,6 +51,7 @@
       this.players = new Map(); // id -> { id, number, name, color }
       this.order = []; // player ids in joining order (decides who hosts next)
       this.spots = new Map(); // id -> which spot in the scene they're in (0 is the best spot)
+      this.satOut = new Map(); // id -> how many shuffles in a row they've been left out of the picture
       this.scene = SCENES[0];
       this.shot = 0; // which photo we're on
       this.shotAt = 0; // when the current photo's shutter fires (host clock)
@@ -94,6 +95,7 @@
       if (!this.players.delete(id)) return;
       this.order = this.order.filter((p) => p !== id);
       this.spots.delete(id);
+      this.satOut.delete(id);
       if (this.players.size === 0) return;
       if (this.hostId === id) this.hostId = this.order[0];
       this.broadcastLobby();
@@ -122,19 +124,31 @@
           return true;
         case 'shuffle': {
           const n = this.order.length;
-          const spots = Math.max(n, Math.min(MAX_SPOTS, Number.isInteger(msg.spots) ? msg.spots : n));
-          if (spots < 2) return false;
+          const spots = Math.min(MAX_SPOTS, Number.isInteger(msg.spots) && msg.spots > 0 ? msg.spots : n);
+          if (spots < 2 && n < 2) return false;
           const before = this.order.map((p) => this.spots.get(p)).join();
-          // Random spots for everyone (trying again if nothing moved).
           for (let attempt = 0; attempt < 10; attempt++) {
+            // More mates than spots: who's in this time? Whoever has sat out most goes first (ties
+            // broken randomly), so everyone takes turns being in the photo.
+            const lineup = this.order
+              .map((p) => ({ p, out: this.satOut.get(p) || 0, r: this.random() }))
+              .sort((a, b) => b.out - a.out || a.r - b.r)
+              .map((x) => x.p);
+            const inPhoto = lineup.slice(0, spots);
             const pool = Array.from({ length: spots }, (_, i) => i);
             for (let i = pool.length - 1; i > 0; i--) {
               const j = this.rand(i + 1);
               [pool[i], pool[j]] = [pool[j], pool[i]];
             }
-            this.order.forEach((p, i) => this.spots.set(p, pool[i]));
+            inPhoto.forEach((p, i) => this.spots.set(p, pool[i]));
+            // Everyone else waits off to the side (spots past the end aren't drawn).
+            lineup.slice(spots).forEach((p, i) => this.spots.set(p, spots + i));
             if (this.order.map((p) => this.spots.get(p)).join() !== before) break;
           }
+          this.order.forEach((p) => {
+            if (this.spots.get(p) >= spots) this.satOut.set(p, (this.satOut.get(p) || 0) + 1);
+            else this.satOut.set(p, 0);
+          });
           this.broadcastLobby();
           return true;
         }
