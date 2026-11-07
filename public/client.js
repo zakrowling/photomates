@@ -584,10 +584,6 @@ function basePath() {
   return location.pathname.replace(/[^/]*$/, '');
 }
 
-function shareLink(code) {
-  return `${location.origin}${basePath()}${code.toLowerCase()}`;
-}
-
 function buildScenePicker() {
   const select = $('scene-select');
   select.replaceChildren(...Scenes.SCENES.map((s) => {
@@ -689,23 +685,23 @@ $('open-btn').addEventListener('click', () => socket.emit('input', { type: 'open
 $('home-btn').addEventListener('click', () => socket.emit('input', { type: 'home' }));
 $('copy-btn').addEventListener('click', async () => {
   try {
-    await navigator.clipboard.writeText(shareLink(state.roomCode));
+    await navigator.clipboard.writeText(state.roomCode);
   } catch {
     // Older browsers (or iframes without clipboard access): copy from a temporary text box.
     const t = document.createElement('textarea');
-    t.value = shareLink(state.roomCode);
+    t.value = state.roomCode;
     document.body.append(t);
     t.select();
     document.execCommand('copy');
     t.remove();
   }
   $('copy-btn').textContent = 'Copied!';
-  setTimeout(() => { $('copy-btn').textContent = 'Copy invite'; }, 1500);
+  setTimeout(() => { $('copy-btn').textContent = 'Copy code'; }, 1500);
 });
 $('lobby-copy-btn').addEventListener('click', () => {
   $('copy-btn').click();
   $('lobby-copy-btn').textContent = 'Copied!';
-  setTimeout(() => { $('lobby-copy-btn').textContent = 'Copy invite'; }, 1500);
+  setTimeout(() => { $('lobby-copy-btn').textContent = 'Copy code'; }, 1500);
 });
 
 socket.on('lobbyUpdate', applyLobby);
