@@ -1,6 +1,6 @@
 // Photomates scenes: where everyone sits and what's drawn around them, on a 1280×720 stage.
 // Each person is a square, background-removed picture (head near the top, shoulders at the bottom).
-// Row scenes (office, outdoor theatre, stadium) draw back to front: a row's seats, then the people sitting in them,
+// Row scenes (the office) draw back to front: a row's seats, then the people sitting in them,
 // then whatever is in front of that row (a bench, the next row of seats), which hides their lower half
 // so everyone looks like they're really sitting there. Shared by the browser and the Node tests.
 (function (root, factory) {
@@ -115,99 +115,6 @@
     // The photo is warm and evenly lit: warm webcams up a touch and soften their contrast to match.
     tone: 'saturate(0.92) sepia(0.12) contrast(0.97) brightness(0.97)',
   });
-
-  // Outdoor Theatre: sunny concrete steps among trees (assets/bg/outdoor-theatre.jpg). Everyone sits on
-  // a step, and its front edge hides them from the seat down.
-  const steps = (bench, size, xs) => ({ bench, faceY: Math.round(bench - size * 0.47), size, xs });
-  const outdoor = photoScene({
-    id: 'outdoor',
-    name: 'Outdoor Theatre',
-    src: 'assets/bg/outdoor-theatre.jpg',
-    rows: [
-      steps(401, 150, [240, 440, 640, 840, 1040]),
-      steps(480, 170, [325, 535, 745, 955]),
-      steps(562, 195, [180, 410, 640, 870, 1100]),
-      steps(666, 225, [290, 520, 760, 990]),
-    ],
-    priority: [[3, 1], [3, 2], [2, 2], [3, 0], [3, 3], [2, 1], [2, 3], [1, 1], [1, 2], [2, 0], [2, 4], [1, 0], [1, 3], [0, 2]],
-    solo: [2, 2],
-    // Bright, slightly cool daylight; only a faint shadow where they meet the step.
-    tone: 'saturate(0.95) contrast(1.04) brightness(1.06)',
-    benchShadow: 0.25,
-  });
-
-  // ---------- Stadium: rows of blue plastic seats ----------
-
-  // Seat backs for each row, back to front. People sit in the middle rows (1-3); the row in front of
-  // them hides their lower half.
-  const STADIUM_SEATS = [
-    { top: -40, w: 150 },
-    { top: 95, w: 170 },
-    { top: 245, w: 198 },
-    { top: 420, w: 232 },
-    { top: 625, w: 272 },
-  ];
-  const seatXs = (row, count, offset = 0) => {
-    const step = row.w * 1.12;
-    return Array.from({ length: count }, (_, i) => Math.round(W / 2 + (i - (count - 1) / 2 + offset) * step));
-  };
-  const STADIUM_ROWS = [1, 2, 3].map((k, i) => {
-    const s = STADIUM_SEATS[k];
-    const count = [4, 5, 4][i];
-    return { seatRow: k, bench: STADIUM_SEATS[k + 1].top + 30, size: s.w * 1.25, xs: seatXs(s, count) };
-  });
-
-  function stadiumSeat(c, x, top, w) {
-    const h = w * 0.62;
-    rr(c, x - w / 2, top, w, h, w * 0.16);
-    c.fillStyle = grad(c, top, top + h, [[0, '#4d9cff'], [0.55, '#1f6fe0'], [1, '#1557b8']]);
-    c.fill();
-    c.strokeStyle = 'rgba(0,30,90,0.35)';
-    c.lineWidth = 2;
-    c.stroke();
-    // Shine and seat number disc.
-    c.fillStyle = 'rgba(255,255,255,0.25)';
-    rr(c, x - w * 0.36, top + h * 0.1, w * 0.72, h * 0.16, h * 0.08);
-    c.fill();
-    c.fillStyle = '#e9eef7';
-    c.beginPath();
-    c.arc(x, top + h * 0.42, w * 0.055, 0, Math.PI * 2);
-    c.fill();
-  }
-
-  function stadiumRow(c, k) {
-    const s = STADIUM_SEATS[k];
-    const step = s.w * 1.12;
-    // A concrete step under each row of seats.
-    c.fillStyle = '#5d6676';
-    c.fillRect(0, s.top + s.w * 0.55, W, s.w * 0.25);
-    // Odd rows are offset by half a seat, so seat counts that are even (odd rows) or odd (even rows)
-    // centre neatly (see seatXs).
-    for (let j = -8; j <= 8; j++) stadiumSeat(c, W / 2 + (j + (k % 2 ? 0.5 : 0)) * step, s.top, s.w);
-  }
-
-  const stadium = {
-    id: 'stadium',
-    name: 'Stadium',
-    kind: 'rows',
-    rows: STADIUM_ROWS,
-    priority: [[2, 1], [2, 2], [1, 2], [2, 0], [2, 3], [1, 1], [1, 3], [0, 1], [0, 2], [1, 0], [1, 4], [0, 0], [0, 3]],
-    solo: [1, 2],
-    background(c) {
-      c.fillStyle = '#3e4757';
-      c.fillRect(0, 0, W, H);
-      stadiumRow(c, 0);
-    },
-    seatBacks(c, r) {
-      stadiumRow(c, STADIUM_ROWS[r].seatRow);
-    },
-    front(c, r) {
-      const k = STADIUM_ROWS[r].seatRow + 1;
-      // The front-most row of seats is drawn by the last people row.
-      if (r === STADIUM_ROWS.length - 1 || k !== STADIUM_ROWS[r + 1].seatRow) stadiumRow(c, k);
-    },
-    tone: 'saturate(1.08) contrast(1.03)',
-  };
 
   // ---------- Brady Bunch: everyone in their own square on a grid ----------
 
@@ -356,7 +263,7 @@
   // of a neck: necks are [x, y, width] for the middle of each neck's top edge on the stage. Heads are
   // sized from the neck's width and placed so the chin sits a little over the neck top.
   const CHIN_AT = 0.585; // how far down each person's picture their chin is (see updateCrop in client.js)
-  function bodyScene({ id, name, src, necks, tone, headScale = 4.1 }) {
+  function bodyScene({ id, name, src, necks, tone, headScale = 4.1, sides = '#0a0d16' }) {
     return {
       id,
       name,
@@ -367,34 +274,56 @@
         const size = w * headScale;
         return { x: x - size / 2, y: y + w * 0.3 - CHIN_AT * size, size, neck: { x, y, w } };
       }),
+      // The whole photo, fitted to the stage's height (necks are measured that way), dark either side.
       draw(c) {
-        drawPhoto(c, src);
+        c.fillStyle = sides;
+        c.fillRect(0, 0, W, H);
+        const img = photo(src);
+        if (!img) return;
+        const k = H / img.naturalHeight;
+        c.drawImage(img, (W - img.naturalWidth * k) / 2, 0, img.naturalWidth * k, H);
       },
     };
   }
 
-  // Bodybuilders (assets/bg/bodybuilders.jpg): 11 bodies. The middle one first, then the two kneeling at
-  // the front, then outwards.
+  // Bodybuilders (assets/bg/bodybuilders.jpg): 6 bodies, three standing at the back and three kneeling
+  // in front. The middle standing one first, then the middle kneeling one, then outwards.
   const bodybuilders = bodyScene({
     id: 'bodybuilders',
     name: 'Bodybuilders',
     src: 'assets/bg/bodybuilders.jpg',
     necks: [
-      [645, 180, 47],
-      [322, 334, 39],
-      [945, 375, 39],
-      [505, 232, 41],
-      [786, 230, 41],
-      [387, 218, 43],
-      [912, 218, 41],
-      [251, 239, 39],
-      [1006, 223, 39],
-      [144, 220, 43],
-      [1105, 214, 41],
+      [636, 112, 41],
+      [628, 398, 47],
+      [355, 130, 41],
+      [886, 124, 41],
+      [307, 382, 45],
+      [962, 387, 45],
     ],
-    // Warm, contrasty stage lighting to match the bodies.
-    tone: 'contrast(1.1) saturate(1.1) sepia(0.15) brightness(0.98)',
+    // Warm studio light on oiled skin.
+    tone: 'contrast(1.08) saturate(1.1) sepia(0.18) brightness(1.02)',
   });
+  // Samurai (assets/bg/samurai.jpg): 6 headless warriors, three standing at the back and three
+  // kneeling in front. Their necks are slimmer than the bodybuilders', so heads are scaled up more.
+  const samurai = bodyScene({
+    id: 'samurai',
+    name: 'Samurai',
+    src: 'assets/bg/samurai.jpg',
+    necks: [
+      [640, 84, 29],
+      [646, 350, 33],
+      [391, 68, 31],
+      [883, 63, 32],
+      [323, 324, 29],
+      [969, 344, 29],
+    ],
+    headScale: 5.4,
+    // Cool, dim stage light.
+    tone: 'contrast(1.05) saturate(0.9) brightness(0.92) hue-rotate(-4deg)',
+    sides: '#0b1020',
+  });
+
+
 
   // The Matey Bunch (assets/bg/the-matey-bunch.jpg): the photo's 3×3 grid with the logo in the middle
   // square leaves 8 squares for people, filled in a balanced order. Bigger groups use the drawn grid.
@@ -421,7 +350,7 @@
     hardEdges: true,
   };
 
-  const SCENES = [office, outdoor, stadium, brady, bodybuilders];
+  const SCENES = [office, brady, bodybuilders, samurai];
   const byId = (id) => SCENES.find((s) => s.id === id) || SCENES[0];
 
   // Seat rectangles (where each person's square picture goes) for n people, in seat order.

@@ -33,7 +33,7 @@ test('on your own, you sit in the middle', () => {
 });
 
 test('row scenes put the front row in front: bigger people further down', () => {
-  for (const id of ['office', 'outdoor', 'stadium']) {
+  for (const id of ['office']) {
     const seats = Scenes.layout(id, MAX_PLAYERS);
     const byRow = new Map();
     seats.forEach((s) => byRow.set(s.row, s));
@@ -52,11 +52,11 @@ test('the Brady Bunch grid grows with the group', () => {
   assert.ok(Scenes.bradyCells(12).length >= 12);
 });
 
-test('the bodybuilders have a head for each of their 11 necks', () => {
-  const scene = Scenes.byId('bodybuilders');
-  assert.equal(scene.capacity, 11);
-  const seats = Scenes.layout('bodybuilders', 12);
-  assert.equal(seats.length, 11);
+for (const id of ['bodybuilders', 'samurai']) test(`${id} have a head for each of their 6 necks`, () => {
+  const scene = Scenes.byId(id);
+  assert.equal(scene.capacity, 6);
+  const seats = Scenes.layout(id, 12);
+  assert.equal(seats.length, 6);
   seats.forEach((s) => {
     // Centred over the neck, with the chin (0.585 down the picture) just below the neck's top.
     assert.ok(Math.abs(s.x + s.size / 2 - s.neck.x) < 1);

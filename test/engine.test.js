@@ -49,8 +49,8 @@ test('anyone can switch the scene, including scenes this host has never heard of
   const { room, last } = makeRoom();
   room.join('a');
   room.join('b');
-  assert.equal(room.input('b', { type: 'scene', id: 'stadium' }), true);
-  assert.equal(last('lobbyUpdate').data.scene, 'stadium');
+  assert.equal(room.input('b', { type: 'scene', id: 'samurai' }), true);
+  assert.equal(last('lobbyUpdate').data.scene, 'samurai');
   assert.equal(room.input('b', { type: 'scene', id: 'moon-base' }), true, 'a newer scene still works');
   ['', 'X', '<script>', 42, 'a'.repeat(40)].forEach((id) => assert.equal(room.input('b', { type: 'scene', id }), false, String(id)));
   assert.equal(room.input('ghost', { type: 'scene', id: 'brady' }), false, 'only players in the room');
