@@ -52,7 +52,7 @@ test('the Brady Bunch grid grows with the group', () => {
   assert.ok(Scenes.bradyCells(12).length >= 12);
 });
 
-for (const id of ['bodybuilders', 'samurai']) test(`${id} have a head for each of their 6 necks`, () => {
+for (const id of ['bodybuilders', 'samurai', 'christmas']) test(`${id} have a head for each of their 6 necks`, () => {
   const scene = Scenes.byId(id);
   assert.equal(scene.capacity, 6);
   const seats = Scenes.layout(id, 12);

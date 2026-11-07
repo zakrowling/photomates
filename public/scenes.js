@@ -263,7 +263,7 @@
   // of a neck: necks are [x, y, width] for the middle of each neck's top edge on the stage. Heads are
   // sized from the neck's width and placed so the chin sits a little over the neck top.
   const CHIN_AT = 0.585; // how far down each person's picture their chin is (see updateCrop in client.js)
-  function bodyScene({ id, name, src, necks, tone, headScale = 5.1, sides = '#0a0d16' }) {
+  function bodyScene({ id, name, src, necks, tone, headScale = 5.1, sides = '#0a0d16', sink = 0.75 }) {
     return {
       id,
       name,
@@ -272,7 +272,7 @@
       tone,
       seats: necks.map(([x, y, w]) => {
         const size = w * headScale;
-        return { x: x - size / 2, y: y + w * 0.75 - CHIN_AT * size, size, neck: { x, y, w } };
+        return { x: x - size / 2, y: y + w * sink - CHIN_AT * size, size, neck: { x, y, w } };
       }),
       // The whole photo, fitted to the stage's height (necks are measured that way), dark either side.
       draw(c) {
@@ -350,7 +350,29 @@
     hardEdges: true,
   };
 
-  const SCENES = [office, brady, bodybuilders, samurai];
+  // Christmas (assets/bg/christmas.jpg): a retro Polaroid of 6 headless mates in Christmas jumpers,
+  // three standing and three sitting in front. The photo fills the whole stage (the patterned edges are
+  // the background), so the necks are measured on the full photo.
+  const christmas = bodyScene({
+    id: 'christmas',
+    name: 'Christmas',
+    src: 'assets/bg/christmas.jpg',
+    necks: [
+      [655, 167, 32],
+      [648, 346, 34],
+      [539, 165, 32],
+      [763, 172, 31],
+      [480, 359, 31],
+      [807, 364, 31],
+    ],
+    headScale: 6.4,
+    sink: 1.05,
+    // Faded, warm 80s film.
+    tone: 'sepia(0.35) saturate(0.85) contrast(0.92) brightness(1.02)',
+    sides: '#f3ecec',
+  });
+
+  const SCENES = [office, brady, bodybuilders, samurai, christmas];
   const byId = (id) => SCENES.find((s) => s.id === id) || SCENES[0];
 
   // Seat rectangles (where each person's square picture goes) for n people, in seat order.
