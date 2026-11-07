@@ -758,10 +758,21 @@ async function compose(shot) {
   if (logo) {
     const lw = 150;
     const lh = lw * (logo.naturalHeight / logo.naturalWidth);
+    // A one-colour logo: white, or grey on the pale Christmas photo.
+    const tint = shot.scene === 'christmas' ? '#8a8a8a' : '#ffffff';
+    const lc = Object.assign(document.createElement('canvas'), { width: Math.round(lw * scale), height: Math.round(lh * scale) });
+    const lx = lc.getContext('2d');
+    lx.drawImage(logo, 0, 0, lc.width, lc.height);
+    lx.globalCompositeOperation = 'source-in';
+    lx.fillStyle = tint;
+    lx.fillRect(0, 0, lc.width, lc.height);
     c.save();
-    c.shadowColor = 'rgba(0,0,0,0.55)';
-    c.shadowBlur = 6;
-    c.drawImage(logo, (Scenes.W + fw) / 2 - 16 - lw, Scenes.H - 14 - lh, lw, lh);
+    c.globalAlpha = 0.85;
+    if (tint === '#ffffff') {
+      c.shadowColor = 'rgba(0,0,0,0.45)';
+      c.shadowBlur = 6;
+    }
+    c.drawImage(lc, (Scenes.W + fw) / 2 - 16 - lw, Scenes.H - 14 - lh, lw, lh);
     c.restore();
   }
   const blob = await new Promise((resolve) => out.toBlob(resolve, 'image/png'));
