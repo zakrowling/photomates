@@ -99,23 +99,23 @@
     };
   }
 
-  // Office: a tiered auditorium with desks (assets/bg/office.jpg). Faces go just above the chair backs.
+  // Office: two tiers of 3 chairs behind wooden desks (assets/bg/office.jpg). Faces go just above the
+  // chair backs. The front middle chair fills first, then the back middle, then outwards.
   const office = photoScene({
     id: 'office',
     name: 'Office',
     src: 'assets/bg/office.jpg',
     rows: [
-      { bench: 298, faceY: 232, size: 140, xs: [168, 406, 643, 880, 1117] },
-      { bench: 368, faceY: 291, size: 164, xs: [252, 512, 773, 1035] },
-      { bench: 468, faceY: 378, size: 191, xs: [87, 363, 643, 923, 1199] },
-      { bench: 645, faceY: 521, size: 263, xs: [160, 483, 804, 1128] },
+      { bench: 361, faceY: 284, size: 190, xs: [289, 636, 980] },
+      { bench: 563, faceY: 425, size: 290, xs: [213, 636, 1052] },
     ],
-    // Front row first, then fanning out and back.
-    priority: [[3, 1], [3, 2], [2, 2], [3, 0], [3, 3], [2, 1], [2, 3], [1, 1], [1, 2], [2, 0], [2, 4], [1, 0], [1, 3], [0, 2]],
-    solo: [2, 2],
-    // The photo is warm and evenly lit: warm webcams up a touch and soften their contrast to match.
+    priority: [[1, 1], [0, 1], [1, 0], [1, 2], [0, 0], [0, 2]],
+    solo: [1, 1],
+    capacity: 6,
+    // Warm, evenly lit wood: warm webcams up a touch and soften their contrast to match.
     tone: 'saturate(0.92) sepia(0.12) contrast(0.97) brightness(0.97)',
   });
+
 
   // ---------- Brady Bunch: everyone in their own square on a grid ----------
 
@@ -374,12 +374,12 @@
     sides: '#f3ecec',
   });
 
-  // Vintage Airplane (assets/bg/airplane.jpg): the 6 front-row seats either side of the aisle. Everyone
+  // Airplane (assets/bg/airplane.jpg): the 6 front-row seats either side of the aisle. Everyone
   // sits in a seat with their face in front of its headrest, and the seat-back tables in front hide them
   // from the chest down. Middle seats fill first.
   const airplane = photoScene({
     id: 'airplane',
-    name: 'Vintage Airplane',
+    name: 'Airplane',
     src: 'assets/bg/airplane.jpg',
     rows: [{ bench: 565, faceY: 456, size: 232, xs: [183, 359, 523, 753, 919, 1093] }],
     priority: [[0, 2], [0, 3], [0, 1], [0, 4], [0, 0], [0, 5]],
