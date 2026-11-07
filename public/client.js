@@ -479,7 +479,13 @@ function applyLobby(payload) {
   state.roomCode = payload.roomCode;
   $('room-code-txt').textContent = payload.roomCode;
   $('share-link').value = shareLink(payload.roomCode);
-  document.querySelectorAll('#scene-picker .chip').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.scene === state.scene)));
+  document.querySelectorAll('#scene-picker .chip').forEach((b) => {
+    b.setAttribute('aria-pressed', String(b.dataset.scene === state.scene));
+    // Face-in-hole boards only have so many holes.
+    const cap = Scenes.byId(b.dataset.scene).capacity;
+    b.disabled = !!cap && payload.players.length > cap && b.dataset.scene !== state.scene;
+    b.title = cap ? `Up to ${cap} mates` : '';
+  });
   const n = state.players.length;
   $('people').textContent = `${n} in the booth`;
   $('shuffle-btn').disabled = n < 2;

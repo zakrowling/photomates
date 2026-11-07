@@ -56,9 +56,15 @@
       }
       return;
     }
-    const k = Math.max(W / img.naturalWidth, H / img.naturalHeight);
-    const dw = img.naturalWidth * k;
-    const dh = img.naturalHeight * k;
+    drawPhotoImage(c, img, fromY);
+  }
+
+  function drawPhotoImage(c, img, fromY = 0) {
+    const iw = img.naturalWidth || img.width;
+    const ih = img.naturalHeight || img.height;
+    const k = Math.max(W / iw, H / ih);
+    const dw = iw * k;
+    const dh = ih * k;
     const dx = (W - dw) / 2;
     const dy = (H - dh) / 2;
     c.save();
@@ -219,6 +225,72 @@
     return cells;
   }
 
+  // ---------- Face-in-hole boards ----------
+
+  // A photo with green ovals where faces go. The green is keyed out (made see-through) once the photo
+  // loads, then everyone's face is drawn behind the photo, scaled to fill their hole, so the photo's own
+  // oval edge frames each face like a fairground cut-out board.
+  const keyed = new Map();
+  function keyedPhoto(src) {
+    if (keyed.has(src)) return keyed.get(src);
+    const img = photo(src);
+    if (!img) return null;
+    const cv = document.createElement('canvas');
+    cv.width = img.naturalWidth;
+    cv.height = img.naturalHeight;
+    const k = cv.getContext('2d', { willReadFrequently: true });
+    k.drawImage(img, 0, 0);
+    const data = k.getImageData(0, 0, cv.width, cv.height);
+    const d = data.data;
+    for (let i = 0; i < d.length; i += 4) {
+      const other = Math.max(d[i], d[i + 2]);
+      const green = d[i + 1] - other;
+      if (green > 90) {
+        d[i + 3] = 0;
+      } else if (green > 30) {
+        // The oval's soft edge: partly see-through, and its green tint removed.
+        d[i + 3] = Math.round(255 * (1 - (green - 30) / 60));
+        d[i + 1] = other;
+      }
+    }
+    k.putImageData(data, 0, 0);
+    keyed.set(src, cv);
+    return cv;
+  }
+
+  function holeScene({ id, name, src, holes, holeW, holeH, tone, faceScale = 3.1 }) {
+    return {
+      id,
+      name,
+      kind: 'holes',
+      capacity: holes.length,
+      tone,
+      // Faces sized to fill the hole, a touch low so the forehead fills its top.
+      seats: holes.map(([cx, cy]) => {
+        const size = holeW * faceScale;
+        return { x: cx - size / 2, y: cy + holeH * 0.06 - FACE_AT * size, size, hole: { cx, cy, w: holeW, h: holeH } };
+      }),
+      drawBoard(c) {
+        const board = keyedPhoto(src);
+        if (board) drawPhotoImage(c, board);
+        else drawPhoto(c, src);
+      },
+    };
+  }
+
+  // Bodybuilders (assets/bg/bodybuilders.jpg): 11 holes, the middle one first, then the two kneeling at
+  // the front, then outwards.
+  const bodybuilders = holeScene({
+    id: 'bodybuilders',
+    name: 'Bodybuilders',
+    src: 'assets/bg/bodybuilders.jpg',
+    holes: [[644, 154], [327, 315], [935, 352], [505, 207], [783, 203], [393, 194], [900, 195], [258, 209], [997, 195], [150, 194], [1098, 190]],
+    holeW: 69.4,
+    holeH: 80.6,
+    // Warm, contrasty stage lighting to match the bodies.
+    tone: 'contrast(1.1) saturate(1.1) sepia(0.15) brightness(0.98)',
+  });
+
   // The Matey Bunch (assets/bg/the-matey-bunch.jpg): the photo's 3×3 grid with the logo in the middle
   // square leaves 8 squares for people, filled in a balanced order. Bigger groups use the drawn grid.
   const MATEY_PHOTO = 'assets/bg/the-matey-bunch.jpg';
@@ -244,12 +316,14 @@
     hardEdges: true,
   };
 
-  const SCENES = [office, outdoor, stadium, brady];
+  const SCENES = [office, outdoor, stadium, brady, bodybuilders];
   const byId = (id) => SCENES.find((s) => s.id === id) || SCENES[0];
 
   // Seat rectangles (where each person's square picture goes) for n people, in seat order.
   function layout(sceneId, n) {
     const scene = byId(sceneId);
+    // Boards have a fixed number of holes: anyone beyond that isn't in the picture.
+    if (scene.kind === 'holes') return scene.seats.slice(0, Math.min(n, scene.capacity));
     if (scene.kind === 'grid') {
       return scene.cells(n).slice(0, n).map((cell) => {
         // Head and shoulders filling the cell's height, face in the upper middle.
@@ -278,7 +352,13 @@
     const seats = layout(sceneId, people.length);
     const at = new Map(people.map((p) => [p.seat, p]));
     c.save();
-    if (scene.kind === 'grid') {
+    if (scene.kind === 'holes') {
+      // Faces first, behind the board; the board's see-through holes frame them.
+      c.fillStyle = '#16100d';
+      c.fillRect(0, 0, W, H);
+      seats.forEach((s, i) => drawPerson(c, at.get(i), s, scene));
+      scene.drawBoard(c);
+    } else if (scene.kind === 'grid') {
       c.fillStyle = '#0b0b0f';
       c.fillRect(0, 0, W, H);
       const photoGrid = usesPhotoGrid(people.length) && photo(MATEY_PHOTO);
@@ -326,9 +406,23 @@
       return;
     }
     const rows = scene.kind === 'rows';
+    const crisp = scene.hardEdges ? hardened(person) : null;
     let size = s.size;
     let y = s.y;
-    if (s.bench !== undefined) {
+    if (crisp) {
+      // Crisp cut-outs: the body's hard bottom edge sits just past the bottom of the square, so it
+      // runs flush to the edge (grown around the face first, then lowered as far as needed).
+      const bottom = hardCache.get(person.image).bottom;
+      const faceY = s.y + FACE_AT * s.size;
+      const below = Math.max(0.05, bottom - FACE_AT);
+      let need = s.bench + 2 - (s.y + bottom * s.size);
+      if (need > 0) {
+        size = s.size * Math.min(1.2, 1 + need / (below * s.size));
+        y = faceY - FACE_AT * size;
+        need = s.bench + 2 - (y + bottom * size);
+        if (need > 0) y += need;
+      }
+    } else if (s.bench !== undefined) {
       // If their body ends above the desk (or the bottom of their square), first grow them a little
       // around their face, then lower them only as much as still needed so it hides the end.
       const bottom = person.bottom ?? 1;
@@ -356,7 +450,7 @@
     t.clearRect(0, 0, px, px);
     const depth = rows ? (scene.rows.length - 1 - s.row) * 0.35 : 0;
     t.filter = `${scene.tone}${depth ? ` blur(${(depth * res).toFixed(2)}px)` : ''}`;
-    t.drawImage(scene.hardEdges ? hardened(person) : person.image, 0, 0, px, px);
+    t.drawImage(crisp || person.image, 0, 0, px, px);
     t.filter = 'none';
     if (rows) {
       // The desk's (or step's) shadow across their lower body.
@@ -395,9 +489,20 @@
     ctx.drawImage(src, 0, 0);
     const img = ctx.getImageData(0, 0, w, h);
     const d = img.data;
-    for (let i = 3; i < d.length; i += 4) d[i] = Math.max(0, Math.min(255, (d[i] - 110) * 6 + 128));
+    // Fully in or fully out, and where the (now crisp) body ends.
+    let bottom = 0;
+    for (let y = 0; y < h; y++) {
+      let row = 0;
+      for (let x = 0; x < w; x++) {
+        const i = (y * w + x) * 4 + 3;
+        d[i] = d[i] >= 120 ? 255 : 0;
+        row += d[i];
+      }
+      if (row > w * 255 * 0.2) bottom = (y + 1) / h;
+    }
     ctx.putImageData(img, 0, 0);
     entry.version = person.version;
+    entry.bottom = bottom || 1;
     return entry.canvas;
   }
 

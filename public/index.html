@@ -106,6 +106,7 @@
     .scene-picker { display: flex; gap: 8px; flex-wrap: wrap; }
     .chip { padding: 9px 16px; border-radius: 999px; border: 1px solid var(--line); background: var(--panel); color: var(--text); font-size: 17px; font-weight: 500; }
     .chip[aria-pressed="true"] { background: var(--text); color: #1d1a22; border-color: var(--text); }
+    .chip:disabled { opacity: 0.45; cursor: not-allowed; }
     .spacer { flex: 1; }
     #shutter {
       display: flex; align-items: center; gap: 10px; padding: 12px 26px 12px 14px; border-radius: 999px; border: none;
