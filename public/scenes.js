@@ -231,7 +231,7 @@
   // loads, then everyone's face is drawn behind the photo, scaled to fill their hole, so the photo's own
   // oval edge frames each face like a fairground cut-out board.
   const keyed = new Map();
-  function keyedPhoto(src) {
+  function keyedPhoto(src, feather = 0) {
     if (keyed.has(src)) return keyed.get(src);
     const img = photo(src);
     if (!img) return null;
@@ -254,11 +254,79 @@
       }
     }
     k.putImageData(data, 0, 0);
-    keyed.set(src, cv);
-    return cv;
+    // Underneath the faces: the board with its holes filled in by blurring the colours around them, so
+    // gaps around a face (beside the hair, in the feathered edge) show the photo, not black.
+    const under = document.createElement('canvas');
+    under.width = cv.width;
+    under.height = cv.height;
+    const u = under.getContext('2d');
+    u.drawImage(cv, 0, 0);
+    // Each pass blurs a copy and slips it underneath, filling the holes from their edges inwards.
+    const copy = document.createElement('canvas');
+    copy.width = cv.width;
+    copy.height = cv.height;
+    const cc = copy.getContext('2d');
+    [4, 8, 16, 32, 48, 48].forEach((r) => {
+      cc.clearRect(0, 0, copy.width, copy.height);
+      cc.drawImage(under, 0, 0);
+      u.globalCompositeOperation = 'destination-over';
+      u.filter = `blur(${r}px)`;
+      u.drawImage(copy, 0, 0);
+    });
+    u.filter = 'none';
+    u.globalCompositeOperation = 'source-over';
+    if (feather) featherHoles(cv, feather);
+    const entry = { board: cv, under };
+    keyed.set(src, entry);
+    return entry;
   }
 
-  function holeScene({ id, name, src, holes, holeW, holeH, tone, faceScale = 3.1 }) {
+  // Softens each hole's edge: the board fades out over `px` pixels just outside the oval, so faces blend
+  // into the photo instead of sitting behind a hard cut line. (The fade is outside the oval so no green
+  // fringe shows.)
+  function featherHoles(cv, px) {
+    const w = cv.width;
+    const h = cv.height;
+    const holes = document.createElement('canvas');
+    holes.width = w;
+    holes.height = h;
+    const hc = holes.getContext('2d', { willReadFrequently: true });
+    // White where the board is see-through.
+    const board = cv.getContext('2d', { willReadFrequently: true });
+    const data = board.getImageData(0, 0, w, h);
+    const m = hc.createImageData(w, h);
+    for (let i = 3; i < data.data.length; i += 4) {
+      const v = 255 - data.data[i];
+      m.data[i - 3] = v;
+      m.data[i - 2] = v;
+      m.data[i - 1] = v;
+      m.data[i] = 255;
+    }
+    hc.putImageData(m, 0, 0);
+    // Grow the holes by the feather width, then blur: the fade starts at the oval's edge and ends px out.
+    const grow = document.createElement('canvas');
+    grow.width = w;
+    grow.height = h;
+    const gc = grow.getContext('2d', { willReadFrequently: true });
+    gc.filter = `blur(${px / 2}px)`;
+    gc.drawImage(holes, 0, 0);
+    const gd = gc.getImageData(0, 0, w, h);
+    for (let i = 0; i < gd.data.length; i += 4) {
+      const v = gd.data[i] > 8 ? 255 : 0;
+      gd.data[i] = v;
+      gd.data[i + 1] = v;
+      gd.data[i + 2] = v;
+    }
+    hc.putImageData(gd, 0, 0);
+    gc.clearRect(0, 0, w, h);
+    gc.filter = `blur(${px / 2}px)`;
+    gc.drawImage(holes, 0, 0);
+    const soft = gc.getImageData(0, 0, w, h).data;
+    for (let i = 3; i < data.data.length; i += 4) data.data[i] = Math.min(data.data[i], 255 - soft[i - 3]);
+    board.putImageData(data, 0, 0);
+  }
+
+  function holeScene({ id, name, src, holes, holeW, holeH, tone, faceScale = 3.1, feather = 0 }) {
     return {
       id,
       name,
@@ -270,9 +338,13 @@
         const size = holeW * faceScale;
         return { x: cx - size / 2, y: cy + holeH * 0.06 - FACE_AT * size, size, hole: { cx, cy, w: holeW, h: holeH } };
       }),
+      drawUnder(c) {
+        const k = keyedPhoto(src, feather);
+        if (k) drawPhotoImage(c, k.under);
+      },
       drawBoard(c) {
-        const board = keyedPhoto(src);
-        if (board) drawPhotoImage(c, board);
+        const k = keyedPhoto(src, feather);
+        if (k) drawPhotoImage(c, k.board);
         else drawPhoto(c, src);
       },
     };
@@ -289,6 +361,8 @@
     holeH: 80.6,
     // Warm, contrasty stage lighting to match the bodies.
     tone: 'contrast(1.1) saturate(1.1) sepia(0.15) brightness(0.98)',
+    // Faces blend into the necks over about 8 pixels of the photo.
+    feather: 8,
   });
 
   // The Matey Bunch (assets/bg/the-matey-bunch.jpg): the photo's 3×3 grid with the logo in the middle
@@ -356,6 +430,7 @@
       // Faces first, behind the board; the board's see-through holes frame them.
       c.fillStyle = '#16100d';
       c.fillRect(0, 0, W, H);
+      scene.drawUnder(c);
       seats.forEach((s, i) => drawPerson(c, at.get(i), s, scene));
       scene.drawBoard(c);
     } else if (scene.kind === 'grid') {
@@ -376,7 +451,9 @@
         }
         c.save();
         c.beginPath();
-        c.rect(cell.x, cell.y, cell.w, cell.h);
+        // A little into the black line below, so no sliver of the square's colour shows under them
+        // (the photo's squares don't end on whole pixels once scaled to the stage).
+        c.rect(cell.x, cell.y, cell.w, cell.h + 1.5);
         c.clip();
         drawPerson(c, at.get(i), s, scene);
         c.restore();
@@ -415,11 +492,11 @@
       const bottom = hardCache.get(person.image).bottom;
       const faceY = s.y + FACE_AT * s.size;
       const below = Math.max(0.05, bottom - FACE_AT);
-      let need = s.bench + 2 - (s.y + bottom * s.size);
+      let need = s.bench + 4 - (s.y + bottom * s.size);
       if (need > 0) {
         size = s.size * Math.min(1.2, 1 + need / (below * s.size));
         y = faceY - FACE_AT * size;
-        need = s.bench + 2 - (y + bottom * size);
+        need = s.bench + 4 - (y + bottom * size);
         if (need > 0) y += need;
       }
     } else if (s.bench !== undefined) {
