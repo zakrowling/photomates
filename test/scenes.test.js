@@ -52,15 +52,15 @@ test('the Brady Bunch grid grows with the group', () => {
   assert.ok(Scenes.bradyCells(12).length >= 12);
 });
 
-test('the bodybuilders board has a face for each of its 11 holes', () => {
+test('the bodybuilders have a head for each of their 11 necks', () => {
   const scene = Scenes.byId('bodybuilders');
   assert.equal(scene.capacity, 11);
   const seats = Scenes.layout('bodybuilders', 12);
   assert.equal(seats.length, 11);
   seats.forEach((s) => {
-    // The face (FACE_AT down the picture) lands in its hole.
-    const fy = s.y + s.size * 0.38;
-    assert.ok(Math.abs(s.x + s.size / 2 - s.hole.cx) < 1);
-    assert.ok(Math.abs(fy - s.hole.cy) < s.hole.h * 0.2);
+    // Centred over the neck, with the chin (0.585 down the picture) just below the neck's top.
+    assert.ok(Math.abs(s.x + s.size / 2 - s.neck.x) < 1);
+    const chin = s.y + s.size * 0.585;
+    assert.ok(chin > s.neck.y && chin < s.neck.y + s.neck.w, `chin ${chin} neck ${s.neck.y}`);
   });
 });

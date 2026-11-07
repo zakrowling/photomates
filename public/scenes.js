@@ -350,19 +350,50 @@
     };
   }
 
-  // Bodybuilders (assets/bg/bodybuilders.jpg): 11 holes, the middle one first, then the two kneeling at
+  // ---------- Heads on bodies ----------
+
+  // A photo of headless bodies. Each person's head (their cut-out, faded out below the chin) goes on top
+  // of a neck: necks are [x, y, width] for the middle of each neck's top edge on the stage. Heads are
+  // sized from the neck's width and placed so the chin sits a little over the neck top.
+  const CHIN_AT = 0.585; // how far down each person's picture their chin is (see updateCrop in client.js)
+  function bodyScene({ id, name, src, necks, tone, headScale = 4.1 }) {
+    return {
+      id,
+      name,
+      kind: 'heads',
+      capacity: necks.length,
+      tone,
+      seats: necks.map(([x, y, w]) => {
+        const size = w * headScale;
+        return { x: x - size / 2, y: y + w * 0.3 - CHIN_AT * size, size, neck: { x, y, w } };
+      }),
+      draw(c) {
+        drawPhoto(c, src);
+      },
+    };
+  }
+
+  // Bodybuilders (assets/bg/bodybuilders.jpg): 11 bodies. The middle one first, then the two kneeling at
   // the front, then outwards.
-  const bodybuilders = holeScene({
+  const bodybuilders = bodyScene({
     id: 'bodybuilders',
     name: 'Bodybuilders',
     src: 'assets/bg/bodybuilders.jpg',
-    holes: [[644, 154], [327, 315], [935, 352], [505, 207], [783, 203], [393, 194], [900, 195], [258, 209], [997, 195], [150, 194], [1098, 190]],
-    holeW: 69.4,
-    holeH: 80.6,
+    necks: [
+      [645, 180, 47],
+      [322, 334, 39],
+      [945, 375, 39],
+      [505, 232, 41],
+      [786, 230, 41],
+      [387, 218, 43],
+      [912, 218, 41],
+      [251, 239, 39],
+      [1006, 223, 39],
+      [144, 220, 43],
+      [1105, 214, 41],
+    ],
     // Warm, contrasty stage lighting to match the bodies.
     tone: 'contrast(1.1) saturate(1.1) sepia(0.15) brightness(0.98)',
-    // Faces blend into the necks over about 8 pixels of the photo.
-    feather: 8,
   });
 
   // The Matey Bunch (assets/bg/the-matey-bunch.jpg): the photo's 3×3 grid with the logo in the middle
@@ -397,7 +428,7 @@
   function layout(sceneId, n) {
     const scene = byId(sceneId);
     // Boards have a fixed number of holes: anyone beyond that isn't in the picture.
-    if (scene.kind === 'holes') return scene.seats.slice(0, Math.min(n, scene.capacity));
+    if (scene.kind === 'holes' || scene.kind === 'heads') return scene.seats.slice(0, Math.min(n, scene.capacity));
     if (scene.kind === 'grid') {
       return scene.cells(n).slice(0, n).map((cell) => {
         // Head and shoulders filling the cell's height, face in the upper middle.
@@ -426,7 +457,14 @@
     const seats = layout(sceneId, people.length);
     const at = new Map(people.map((p) => [p.seat, p]));
     c.save();
-    if (scene.kind === 'holes') {
+    if (scene.kind === 'heads') {
+      // The bodies, then everyone's head on top, back to front (higher necks are further back).
+      scene.draw(c);
+      seats
+        .map((s, i) => ({ s, p: at.get(i) }))
+        .sort((a, b) => a.s.neck.y - b.s.neck.y)
+        .forEach(({ s, p }) => drawPerson(c, p, s, scene));
+    } else if (scene.kind === 'holes') {
       // Faces first, behind the board; the board's see-through holes frame them.
       c.fillStyle = '#16100d';
       c.fillRect(0, 0, W, H);
@@ -529,6 +567,24 @@
     t.filter = `${scene.tone}${depth ? ` blur(${(depth * res).toFixed(2)}px)` : ''}`;
     t.drawImage(crisp || person.image, 0, 0, px, px);
     t.filter = 'none';
+    if (s.neck) {
+      // Heads only: keep a soft oval around the head (hair to chin), so shoulders and shirt disappear and
+      // the body underneath is the photo's.
+      const cx = px / 2;
+      const cy = 0.33 * px;
+      const ry = (CHIN_AT - 0.33 + 0.02) * px;
+      const rx = 0.24 * px;
+      t.save();
+      t.globalCompositeOperation = 'destination-in';
+      t.translate(cx, cy);
+      t.scale(rx / ry, 1);
+      const g = t.createRadialGradient(0, 0, ry * 0.86, 0, 0, ry);
+      g.addColorStop(0, 'rgba(0,0,0,1)');
+      g.addColorStop(1, 'rgba(0,0,0,0)');
+      t.fillStyle = g;
+      t.fillRect(-px * 2, -px, px * 4, px * 2);
+      t.restore();
+    }
     if (rows) {
       // The desk's (or step's) shadow across their lower body.
       const benchY = (s.bench - y) * res;
