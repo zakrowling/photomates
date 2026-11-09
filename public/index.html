@@ -140,7 +140,8 @@
       .controls .invite code { display: none; }
       #scene-select { min-width: 160px; }
     }
-    .scene-picker { position: relative; display: flex; align-items: center; gap: 12px; }
+    .scene-picker { position: relative; display: flex; align-items: center; gap: 6px; }
+    .chip.scene-step { display: grid; place-items: center; width: 44px; padding: 0; }
     .scene-picker .select-wrap { position: relative; }
     #scene-select {
       appearance: none; -webkit-appearance: none; min-width: 200px; padding: 0 44px 0 18px;
@@ -158,6 +159,8 @@
     .chip { padding: 9px 16px; border-radius: 999px; border: 1px solid var(--line); background: var(--panel); color: var(--text); font-size: 17px; font-weight: 500; }
     .chip[aria-pressed="true"] { background: var(--text); color: #1d1a22; border-color: var(--text); }
     .chip:disabled { opacity: 0.45; cursor: not-allowed; }
+    .chip { transition: border-color 0.15s, background 0.15s; }
+    .chip:hover:not(:disabled):not([aria-pressed="true"]) { border-color: var(--accent); background: #1d3029; }
     .spacer { flex: 1; }
     #shutter {
       display: flex; align-items: center; gap: 8px; padding: 0 20px 0 8px; border-radius: 999px; border: none;
@@ -253,7 +256,13 @@
         <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M3 11.5 12 4l9 7.5M5.5 9.5V20h5v-6h3v6h5V9.5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
       </button>
       <div class="scene-picker">
+        <button class="chip scene-step" id="scene-prev" aria-label="Previous scene" title="Previous scene">
+          <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M15 5 8 12l7 7" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
         <div class="select-wrap"><select id="scene-select" aria-label="Scene"></select></div>
+        <button class="chip scene-step" id="scene-next" aria-label="Next scene" title="Next scene">
+          <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="m9 5 7 7-7 7" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
       </div>
       <button class="chip" id="shuffle-btn">Shuffle seats</button>
       <div class="right">

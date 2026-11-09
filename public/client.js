@@ -597,6 +597,14 @@ function buildScenePicker() {
     // Show the room's scene until the host confirms the change.
     select.value = state.scene;
   });
+  // Previous / next: step through the scenes, wrapping round at either end.
+  const step = (by) => {
+    const ids = Scenes.SCENES.map((sc) => sc.id);
+    const at = Math.max(0, ids.indexOf(state.scene));
+    socket.emit('input', { type: 'scene', id: ids[(at + by + ids.length) % ids.length] });
+  };
+  $('scene-prev').addEventListener('click', () => step(-1));
+  $('scene-next').addEventListener('click', () => step(1));
 }
 
 function applyLobby(payload) {
