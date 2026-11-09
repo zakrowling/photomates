@@ -471,7 +471,7 @@
   // A photo of empty pool rings. Each person pops up out of a ring's hole: they're sized to fit the hole,
   // and the front of the ring (and the water) is drawn back over them, so only their top half shows.
   // rings are [hole centre x, hole centre y (the water line), hole half-width, ring half-width, ring
-  // bottom y] on the stage.
+  // bottom y, and optionally how much higher to sit (a fraction of their size)] on the stage.
   function ringScene({ id, name, src, rings, tone, fit = 1.45, aspect = 1.5 }) {
     return {
       id,
@@ -480,10 +480,10 @@
       capacity: rings.length,
       tone,
       frame: () => Math.round(H * aspect),
-      seats: rings.map(([cx, cy, hole, outer, bottom]) => {
+      seats: rings.map(([cx, cy, hole, outer, bottom, lift = 0]) => {
         // Chin at the hole's middle, so their head pokes up out of the ring and their chest fills the hole.
         const size = hole * 2 * fit;
-        return { x: cx - size / 2, y: cy - 0.63 * size, size, ring: { cx, cy, hole, outer, bottom } };
+        return { x: cx - size / 2, y: cy - (0.63 + lift) * size, size, ring: { cx, cy, hole, outer, bottom } };
       }),
       draw(c, clip) {
         const img = photo(src);
@@ -527,11 +527,11 @@
     src: 'assets/bg/tiki-pool-bar.jpg',
     rings: [
       [646, 501, 66, 142, 594],
-      [638, 326, 61, 116, 390],
+      [638, 326, 61, 116, 390, 0.1],
       [287, 493, 66, 147, 584],
       [1001, 507, 70, 144, 589],
-      [330, 325, 58, 120, 385],
-      [954, 329, 63, 118, 393],
+      [330, 325, 58, 120, 385, 0.1],
+      [954, 329, 63, 118, 393, 0.1],
     ],
     // Bright tropical sun on wet skin.
     tone: 'saturate(1.08) contrast(1.04) brightness(1.05)',
