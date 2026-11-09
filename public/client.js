@@ -432,7 +432,7 @@ function frame(now) {
     stage.width = fw;
     const box = document.querySelector('.stage');
     box.style.aspectRatio = `${fw} / ${Scenes.H}`;
-    box.style.width = `${(fw / Scenes.W) * 100}%`;
+    box.style.width = `${(fw / Scenes.W) * 85}%`;   // the live preview, at 85% of the booth's width
   }
   sctx.setTransform(1, 0, 0, 1, -(Scenes.W - fw) / 2, 0);
   Scenes.render(sctx, state.scene, livePeople(now));

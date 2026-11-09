@@ -115,7 +115,7 @@
     .small-btn.ghost { background: transparent; color: var(--muted); border: 1px solid var(--line); }
     .small-btn:hover { filter: brightness(1.08); }
 
-    .stage { position: relative; width: 100%; margin: 0 auto; aspect-ratio: 16 / 9; border-radius: 18px; overflow: hidden; background: #000; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5); }
+    .stage { position: relative; width: 85%; margin: 0 auto; aspect-ratio: 16 / 9; border-radius: 18px; overflow: hidden; background: #000; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5); }
     #stage-canvas { display: block; width: 100%; height: 100%; }
     .overlay { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; flex-direction: column; text-align: center; pointer-events: none; }
     #countdown { font-size: 220px; font-weight: 700; color: #fff; text-shadow: 0 8px 40px rgba(0, 0, 0, 0.6); }
@@ -131,10 +131,11 @@
       padding: 12px max(16px, calc((100vw - 1280px) / 2)); background: rgba(15, 26, 22, 0.92);
       backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); border-top: 1px solid var(--line);
     }
-    body.in-booth { padding-bottom: 110px; }
+    body.in-booth { padding-bottom: 90px; }
     .controls .right { display: flex; align-items: center; gap: 10px; margin-left: auto; flex-wrap: nowrap; justify-content: flex-end; }
-    #scene-select { min-width: 200px; font-size: 19px; padding: 10px 46px 10px 16px; }
     .controls #shutter { white-space: nowrap; }
+    /* Every control in the toolbar is the same height. */
+    .controls .chip, .controls #scene-select, .controls #shutter, .controls .photos-btn, .controls .invite { height: 44px; }
     @media (max-width: 1000px) {
       .controls .invite code { display: none; }
       #scene-select { min-width: 160px; }
@@ -142,29 +143,29 @@
     .scene-picker { position: relative; display: flex; align-items: center; gap: 12px; }
     .scene-picker .select-wrap { position: relative; }
     #scene-select {
-      appearance: none; -webkit-appearance: none; min-width: 260px; padding: 12px 52px 12px 20px;
-      font: inherit; font-size: 22px; font-weight: 600; color: var(--text); cursor: pointer;
-      background: var(--panel); border: 2px solid var(--line); border-radius: 16px;
-      box-shadow: 0 6px 18px rgba(0, 0, 0, 0.3); transition: border-color 0.15s, background 0.15s;
+      appearance: none; -webkit-appearance: none; min-width: 200px; padding: 0 44px 0 18px;
+      font: inherit; font-size: 17px; font-weight: 600; color: var(--text); cursor: pointer;
+      background: var(--panel); border: 1px solid var(--line); border-radius: 999px;
+      transition: border-color 0.15s, background 0.15s;
     }
     #scene-select:hover { border-color: var(--accent); background: #1d3029; }
     #scene-select option { background: var(--panel); color: var(--text); font-size: 18px; }
     #scene-select option:disabled { color: #6f6880; }
     .select-wrap::after {
-      content: ''; position: absolute; right: 20px; top: 50%; width: 10px; height: 10px; pointer-events: none;
-      border-right: 3px solid var(--green); border-bottom: 3px solid var(--green); transform: translateY(-70%) rotate(45deg);
+      content: ''; position: absolute; right: 18px; top: 50%; width: 8px; height: 8px; pointer-events: none;
+      border-right: 2.5px solid var(--green); border-bottom: 2.5px solid var(--green); transform: translateY(-70%) rotate(45deg);
     }
     .chip { padding: 9px 16px; border-radius: 999px; border: 1px solid var(--line); background: var(--panel); color: var(--text); font-size: 17px; font-weight: 500; }
     .chip[aria-pressed="true"] { background: var(--text); color: #1d1a22; border-color: var(--text); }
     .chip:disabled { opacity: 0.45; cursor: not-allowed; }
     .spacer { flex: 1; }
     #shutter {
-      display: flex; align-items: center; gap: 10px; padding: 12px 26px 12px 14px; border-radius: 999px; border: none;
-      background: var(--accent); color: var(--accent-ink); font-size: 22px; font-weight: 700; box-shadow: 0 8px 24px rgba(251, 203, 17, 0.3);
+      display: flex; align-items: center; gap: 8px; padding: 0 20px 0 8px; border-radius: 999px; border: none;
+      background: var(--accent); color: var(--accent-ink); font-size: 17px; font-weight: 700; box-shadow: 0 6px 18px rgba(251, 203, 17, 0.25);
     }
     #shutter:hover:not(:disabled) { background: var(--accent-hi); }
     #shutter:disabled { opacity: 0.6; cursor: default; }
-    #shutter .lens { width: 34px; height: 34px; border-radius: 50%; background: #fff; border: 6px solid var(--accent-ink); }
+    #shutter .lens { width: 28px; height: 28px; border-radius: 50%; background: #fff; border: 5px solid var(--accent-ink); }
 
     #result { position: fixed; inset: 0; background: rgba(6, 12, 9, 0.82); display: flex; align-items: center; justify-content: center; padding: 24px; z-index: 70; }
     .result-card { background: var(--panel); border: 1px solid var(--line); border-radius: 20px; padding: 18px; max-width: 1100px; width: 100%; text-align: center; }
@@ -194,8 +195,8 @@
     .gallery-grid .thumb img { height: auto; }
     .gallery-grid .thumb:hover, .gallery-grid .thumb:focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; }
     .photos-btn {
-      display: flex; align-items: center; gap: 8px; padding: 12px 18px; border-radius: 999px; border: 2px solid var(--green);
-      background: transparent; color: var(--text); font-family: var(--display); font-size: 18px; font-weight: 700;
+      display: flex; align-items: center; gap: 8px; padding: 0 16px; border-radius: 999px; border: 1px solid var(--green);
+      background: transparent; color: var(--text); font-family: var(--display); font-size: 17px; font-weight: 600; white-space: nowrap;
     }
     .photos-btn:hover { background: rgba(55, 160, 130, 0.18); }
     .photos-btn span { background: var(--green); color: #fff; border-radius: 999px; min-width: 26px; padding: 1px 8px; font-size: 15px; }
