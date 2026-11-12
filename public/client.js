@@ -653,9 +653,9 @@ function leaveBooth() {
   history.replaceState(null, '', basePath() + (DEBUG ? '?debug' : ''));
 }
 
+// While connecting, Create and Join stay usable: trying again (say, typing a code after a link room
+// gets stuck) replaces the attempt in progress.
 function setConnecting(on) {
-  $('create-btn').disabled = on;
-  $('join-btn').disabled = on;
   if (on) showError('');
   $('connecting-hint').textContent = 'Connecting...';
   $('connecting-hint').hidden = !on;
