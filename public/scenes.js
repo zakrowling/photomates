@@ -689,7 +689,7 @@
       return;
     }
     const rows = scene.kind === 'rows';
-    const crisp = scene.hardEdges || s.ring ? hardened(person) : null;
+    const crisp = scene.hardEdges ? hardened(person) : null;
     let size = s.size;
     let y = s.y;
     if (crisp) {
@@ -737,20 +737,6 @@
     } else {
       t.filter = `${scene.tone}${depth ? ` blur(${(depth * res).toFixed(2)}px)` : ''}`;
       t.drawImage(crisp || person.image, 0, 0, px, px);
-      if (s.ring) {
-        // In a pool ring their body has to reach down into the hole, but the cut-out ends (and used to
-        // fade) partway down: carry a strip of their chest on down behind them, so their shirt carries
-        // on solidly to the ring's front rim.
-        const end = hardCache.get(person.image).bottom;
-        const sh = person.image.height || person.image.naturalHeight;
-        const from = Math.max(0.3, end - 0.07);
-        t.globalCompositeOperation = 'destination-over';
-        // only as wide as the hole: their body's inside the ring
-        const k = Math.min(1, (s.ring.hole * 2) / size);
-        const sw = crisp.width;
-        t.drawImage(crisp, sw * (1 - k) / 2, from * sh, sw * k, 0.03 * sh, px * (1 - k) / 2, (from + 0.015) * px, px * k, (1 - from) * px);
-        t.globalCompositeOperation = 'source-over';
-      }
       t.filter = 'none';
     }
     if (s.neck) {
